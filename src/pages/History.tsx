@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Download, Search, TrendingUp, TrendingDown, Copy, Check } from 'lucide-react';
-import { useTaskStore } from '../stores';
+import { useLocation } from 'react-router-dom';
+import { useAgentStore, useTaskStore } from '../stores';
 import { MILESTONES } from '../types/common';
 import { TASK_MODE_INFO } from '../types/task';
 import { clsx } from 'clsx';
 import MarkdownRenderer from '../components/ResultView/MarkdownRenderer';
+import { TaskDetail } from '../components/TaskDetail';
 
 interface HistoryResultItem {
   agentId: string;
@@ -105,9 +107,21 @@ const formatExportDate = (date: Date) => {
 };
 
 export default function History() {
+  const location = useLocation();
+  const locationState = location.state as { filterAgent?: string } | null;
+  const { getMilestoneProgress } = useAgentStore();
   const { tasks } = useTaskStore();
+  const milestoneProgress = getMilestoneProgress();
+  const [searchQuery, setSearchQuery] = useState(locationState?.filterAgent ?? '');
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [copiedResultKey, setCopiedResultKey] = useState<string | null>(null);
+  const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (locationState?.filterAgent) {
+      window.history.replaceState({}, document.title);
+    }
+  }, []);
 
   const handleCopyResult = async (resultKey: string, content: string) => {
     try {
@@ -132,7 +146,14 @@ export default function History() {
       return right - left;
     });
 
-    return sortedTasks.map((task) => ({
+    const filtered = searchQuery.trim()
+      ? sortedTasks.filter((task) =>
+          task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          task.assignees.some((a) => a.toLowerCase().includes(searchQuery.toLowerCase()))
+        )
+      : sortedTasks;
+
+    return filtered.map((task) => ({
       id: task.id,
       time: formatTime(task.completedAt ?? task.startedAt ?? task.createdAt),
       title: task.title,
@@ -148,7 +169,7 @@ export default function History() {
         error: result.error,
       })),
     }));
-  }, [tasks]);
+  }, [tasks, searchQuery]);
 
   const handleExportHistory = () => {
     const now = new Date();
@@ -257,6 +278,8 @@ export default function History() {
     };
   }, [tasks]);
 
+  const detailTask = detailTaskId ? tasks.find((t) => t.id === detailTaskId) : null;
+
   return (
     <div className="flex-1 overflow-auto p-6">
       <div className="flex items-center justify-between mb-6">
@@ -277,6 +300,8 @@ export default function History() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
             <input
               type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="搜索任务..."
               className="w-full bg-bg-primary border border-border-default rounded-lg py-2 pl-10 pr-4 text-text-primary placeholder-text-secondary focus:outline-none focus:border-accent"
             />
@@ -333,7 +358,12 @@ export default function History() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="p-3 rounded-lg bg-bg-primary hover:bg-bg-primary/80 transition-colors"
+                className="p-3 rounded-lg bg-bg-primary hover:bg-bg-primary/80 transition-colors cursor-pointer"
+                onClick={() => {
+                  if (!item.id.startsWith('demo-')) {
+                    setDetailTaskId(item.id);
+                  }
+                }}
               >
                 <div className="flex items-center gap-4">
                   <span className={clsx(
@@ -350,7 +380,10 @@ export default function History() {
                   {item.results.length > 0 && (
                     <button
                       type="button"
-                      onClick={() => setExpandedTaskId(expanded ? null : item.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExpandedTaskId(expanded ? null : item.id);
+                      }}
                       className="text-xs text-accent hover:underline"
                     >
                       {expanded ? '收起结果' : `查看结果(${item.results.length})`}
@@ -359,7 +392,10 @@ export default function History() {
                 </div>
 
                 {expanded && item.results.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-border-default space-y-2">
+                  <div
+                    className="mt-3 pt-3 border-t border-border-default space-y-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     {item.results.map((result, resultIndex) => {
                       const resultKey = `${item.id}-${result.agentId}-${resultIndex}`;
                       const copied = copiedResultKey === resultKey;
@@ -408,8 +444,9 @@ export default function History() {
         <h3 className="font-medium text-text-primary mb-4">协作里程碑</h3>
         <div className="grid grid-cols-5 gap-3">
           {MILESTONES.map((milestone, index) => {
-            const isUnlocked = index < 2;
-            const progress = isUnlocked ? 100 : Math.min(100, Math.round((milestone.progress / milestone.requirement) * 100));
+            const progressData = milestoneProgress.find((m) => m.id === milestone.id);
+            const isUnlocked = progressData?.unlocked ?? false;
+            const progress = isUnlocked ? 100 : Math.min(100, Math.round(((progressData?.progress ?? 0) / milestone.requirement) * 100));
             return (
               <motion.div
                 key={milestone.id}
@@ -444,6 +481,12 @@ export default function History() {
           })}
         </div>
       </div>
+
+      <AnimatePresence>
+        {detailTask && (
+          <TaskDetail task={detailTask} onClose={() => setDetailTaskId(null)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

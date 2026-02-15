@@ -1,10 +1,17 @@
-import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Settings } from 'lucide-react';
-import { useAgentStore } from '../stores';
+import { useNavigate } from 'react-router-dom';
+import { useAgentStore, useTaskStore } from '../stores';
 import { AgentCard } from '../components/AgentCard';
+import { TaskDetail } from '../components/TaskDetail';
+import type { Task } from '../types/task';
 
 export default function Squad() {
+  const navigate = useNavigate();
+  const { tasks } = useTaskStore();
   const { agents, updateAgentStatus } = useAgentStore();
+  const [detailTask, setDetailTask] = useState<Task | null>(null);
 
   return (
     <div className="flex-1 overflow-auto p-6">
@@ -34,10 +41,24 @@ export default function Squad() {
             <AgentCard
               agent={agent}
               onAssignTask={() => {
-                // TODO: 接入任务分配弹窗
+                navigate('/tasks', { state: { preselectedAgent: agent.id } });
               }}
               onViewProgress={() => {
-                // TODO: 接入任务详情侧栏
+                const agentTask = tasks
+                  .filter(
+                    (t) =>
+                      t.assignees.includes(agent.id) &&
+                      (t.status === 'running' || t.status === 'completed')
+                  )
+                  .sort((a, b) => {
+                    const ta = new Date(a.completedAt ?? a.startedAt ?? a.createdAt).getTime();
+                    const tb = new Date(b.completedAt ?? b.startedAt ?? b.createdAt).getTime();
+                    return tb - ta;
+                  })[0];
+
+                if (agentTask) {
+                  setDetailTask(agentTask);
+                }
               }}
               onConnect={() => {
                 updateAgentStatus(agent.id, 'online');
@@ -59,6 +80,12 @@ export default function Squad() {
           </button>
         </motion.div>
       </div>
+
+      <AnimatePresence>
+        {detailTask && (
+          <TaskDetail task={detailTask} onClose={() => setDetailTask(null)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

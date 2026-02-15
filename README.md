@@ -6,7 +6,7 @@ AI Squad 是一个桌面端多 AI 协作应用，把“给不同 AI 分派任务
 
 ## 项目关键能力
 
-- 多 Provider 角色化管理：Codex / Claude / Gemini / OpenCode / Droid。
+- 多 Provider 角色化管理：Codex / Claude / Gemini / OpenCode。
 - 任务模式支持：
   - `parallel` 并行探索：多个 AI 同时执行同一任务。
   - `pipeline` 流水线：上一步输出会传给下一位 AI。

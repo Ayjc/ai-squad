@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { Agent, AgentStatus } from '../types/agent';
 import { AGENT_CONFIGS } from '../types/agent';
 import type { ProviderRuntimeStatus } from '../services/tauriService';
+import { useTaskStore } from './taskStore';
 
 interface AgentState {
   agents: Agent[];
@@ -14,6 +15,7 @@ interface AgentState {
   getOnlineCount: () => number;
   getRecommendedAgents: () => Agent[];
   getSynergyTrend: (id: string) => 'up' | 'down' | 'stable';
+  getMilestoneProgress: () => Array<{ id: string; unlocked: boolean; progress: number }>;
 }
 
 // 根据协作数据计算默契度
@@ -131,6 +133,42 @@ export const useAgentStore = create<AgentState>()(
         if (successRate > 0.7) return 'up';
         if (successRate < 0.4) return 'down';
         return 'stable';
+      },
+
+      getMilestoneProgress: () => {
+        const agents = get().agents;
+        const tasks = useTaskStore.getState().tasks;
+
+        const totalTasks = tasks.length;
+        const firstCollab = totalTasks >= 1;
+
+        const maxLevel = agents.reduce((max, a) => Math.max(max, a.level), 0);
+        const synergy50 = maxLevel >= 50;
+
+        const hasMultiAi = tasks.some((t) => t.assignees.length >= 3);
+
+        const sortedByTime = [...tasks].sort((a, b) => {
+          const ta = new Date(a.completedAt ?? a.createdAt).getTime();
+          const tb = new Date(b.completedAt ?? b.createdAt).getTime();
+          return tb - ta;
+        });
+        let streak = 0;
+        for (const t of sortedByTime) {
+          if (t.status === 'completed') streak++;
+          else break;
+        }
+        const streak10 = streak >= 10;
+
+        const usedModes = new Set(tasks.map((t) => t.mode));
+        const allModes = usedModes.size >= 3;
+
+        return [
+          { id: 'first_collab', unlocked: firstCollab, progress: Math.min(totalTasks, 1) },
+          { id: 'synergy_50', unlocked: synergy50, progress: Math.min(maxLevel, 50) },
+          { id: 'multi_ai', unlocked: hasMultiAi, progress: hasMultiAi ? 3 : Math.max(...tasks.map((t) => t.assignees.length), 0) },
+          { id: 'streak_10', unlocked: streak10, progress: Math.min(streak, 10) },
+          { id: 'all_modes', unlocked: allModes, progress: usedModes.size },
+        ];
       },
     }),
     {

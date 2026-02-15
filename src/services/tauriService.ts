@@ -115,6 +115,7 @@ const mapTaskRecord = (record: TaskRecord): Task => {
     startedAt: parseDate(record.started_at),
     completedAt: parseDate(record.completed_at),
     results: [],
+    steps: [],
   };
 };
 
@@ -220,13 +221,22 @@ export async function getTasks(): Promise<Task[] | null> {
       groupedResults.set(record.task_id, [...current, item]);
     });
 
-    return records.map((record) => {
+    const tasks = records.map((record) => {
       const task = mapTaskRecord(record);
       return {
         ...task,
         results: groupedResults.get(task.id) ?? [],
       };
     });
+
+    await Promise.allSettled(
+      tasks.map(async (task) => {
+        const stepRecords = await invoke<TaskStepRecord[]>('get_task_steps', { taskId: task.id });
+        task.steps = stepRecords.map(mapTaskStepRecord);
+      })
+    );
+
+    return tasks;
   } catch (error) {
     console.warn('Tauri get_tasks 调用失败:', error);
     return null;

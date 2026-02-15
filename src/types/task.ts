@@ -38,6 +38,7 @@ export interface Task {
   completedAt?: Date;            // 完成时间
   progress: number;              // 进度 0-100
   results: TaskResult[];         // 执行结果
+  steps: TaskStep[];             // 执行步骤
 }
 
 // 工作模式说明

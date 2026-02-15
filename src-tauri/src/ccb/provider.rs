@@ -43,13 +43,6 @@ pub fn get_supported_providers() -> Vec<Provider> {
             color: "#8B5CF6".to_string(),
             avatar: "⚡".to_string(),
         },
-        Provider {
-            id: "droid".to_string(),
-            name: "Droid".to_string(),
-            display_name: "Droid".to_string(),
-            color: "#EC4899".to_string(),
-            avatar: "🌐".to_string(),
-        },
     ]
 }
 

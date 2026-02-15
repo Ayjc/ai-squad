@@ -46,11 +46,4 @@ export const AGENT_CONFIGS: Record<string, Omit<Agent, 'status' | 'level' | 'exp
     avatar: '⚡',
     color: '#8B5CF6',
   },
-  droid: {
-    id: 'droid',
-    name: 'Droid',
-    displayName: 'Droid',
-    avatar: '🌐',
-    color: '#EC4899',
-  },
 };

@@ -25,7 +25,6 @@ export default {
         'claude': '#D97706',          // Anthropic 橙
         'gemini': '#4285F4',          // Google 蓝
         'opencode': '#8B5CF6',        // 紫色
-        'droid': '#EC4899',           // 粉红
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],

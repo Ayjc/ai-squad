@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Sparkles, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useAgentStore, useTaskStore } from '../stores';
-import type { Task, TaskMode, TaskResult } from '../types/task';
+import type { Task, TaskMode, TaskResult, TaskStep, StepStatus } from '../types/task';
 import { TASK_MODE_INFO } from '../types/task';
 import { clsx } from 'clsx';
-import { askProvider, saveTask, upsertCollaborationStat } from '../services/tauriService';
+import { askProvider, saveTask, saveTaskStep, upsertCollaborationStat } from '../services/tauriService';
 
 const modes: TaskMode[] = ['parallel', 'pipeline', 'master'];
 
@@ -49,12 +50,16 @@ const buildMasterFinalizeMessage = (
 };
 
 export default function Tasks() {
+  const location = useLocation();
+  const locationState = location.state as { preselectedAgent?: string } | null;
   const {
     tasks,
     addTask,
     updateTaskStatus,
     updateTaskProgress,
     addTaskResult,
+    addTaskStep,
+    updateTaskStep,
   } = useTaskStore();
   const { getRecommendedAgents, getSynergyTrend } = useAgentStore();
 
@@ -65,6 +70,14 @@ export default function Tasks() {
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+
+  useEffect(() => {
+    if (locationState?.preselectedAgent) {
+      setSelectedAssignees([locationState.preselectedAgent]);
+      setIsCreateOpen(true);
+      window.history.replaceState({}, document.title);
+    }
+  }, []);
 
   const assigneeOptions = useMemo(() => {
     return getRecommendedAgents().map((agent) => ({
@@ -87,7 +100,7 @@ export default function Tasks() {
 
   const demoTasks: DemoTask[] = [
     { id: '1', title: '分析登录模块bug', status: 'pending', assignees: ['Claude', 'Gemini'], progress: 0 },
-    { id: '2', title: '设计用户界面', status: 'pending', assignees: ['Droid'], progress: 0 },
+    { id: '2', title: '设计用户界面', status: 'pending', assignees: ['OpenCode'], progress: 0 },
     { id: '3', title: '优化数据库查询', status: 'running', assignees: ['Codex'], progress: 65 },
     { id: '4', title: '重构API接口', status: 'completed', assignees: ['Codex'], progress: 100 },
     { id: '5', title: '实现推荐算法', status: 'completed', assignees: ['Gemini'], progress: 100 },
@@ -124,6 +137,44 @@ export default function Tasks() {
     };
   };
 
+  const recordStep = async (
+    taskId: string,
+    stepIndex: number,
+    agentId: string,
+    stepTitle: string,
+    status: StepStatus,
+    content?: string
+  ) => {
+    const now = new Date();
+    const step = {
+      agentId,
+      stepIndex,
+      title: stepTitle,
+      status,
+      content,
+      startedAt: status === 'running' ? now : undefined,
+      completedAt: status === 'completed' || status === 'failed' ? now : undefined,
+    };
+    addTaskStep(taskId, step);
+    const savedId = await saveTaskStep({ ...step, taskId });
+    if (savedId != null) {
+      updateTaskStep(taskId, stepIndex, { id: savedId });
+    }
+  };
+
+  const updateAndPersistStep = async (
+    taskId: string,
+    stepIndex: number,
+    updates: Partial<Pick<TaskStep, 'status' | 'content' | 'completedAt'>>
+  ) => {
+    updateTaskStep(taskId, stepIndex, updates);
+    const task = useTaskStore.getState().tasks.find((t) => t.id === taskId);
+    const step = task?.steps.find((s) => s.stepIndex === stepIndex);
+    if (step) {
+      await saveTaskStep(step);
+    }
+  };
+
   const appendResult = async (
     taskId: string,
     result: TaskResult,
@@ -144,6 +195,10 @@ export default function Tasks() {
     let successCount = 0;
     const totalSteps = assignees.length;
 
+    for (let i = 0; i < assignees.length; i += 1) {
+      await recordStep(taskId, i, assignees[i], `${assignees[i]} 并行执行`, 'running');
+    }
+
     const results = await Promise.all(
       assignees.map(async (agentId) => {
         const result = await executeProvider(agentId, message);
@@ -153,9 +208,15 @@ export default function Tasks() {
 
     for (let index = 0; index < results.length; index += 1) {
       const { result } = results[index];
-        if (result.success) {
-          successCount += 1;
-        }
+      if (result.success) {
+        successCount += 1;
+      }
+
+      await updateAndPersistStep(taskId, index, {
+        status: result.success ? 'completed' : 'failed',
+        content: result.success ? result.content : result.error,
+        completedAt: new Date(),
+      });
 
       await appendResult(taskId, result, index + 1, totalSteps);
     }
@@ -174,12 +235,26 @@ export default function Tasks() {
 
     for (let index = 0; index < assignees.length; index += 1) {
       const agentId = assignees[index];
+      await recordStep(
+        taskId,
+        index,
+        agentId,
+        index === 0 ? `${agentId} 启动流水线` : `${agentId} 基于上一步继续`,
+        'running'
+      );
+
       const result = await executeProvider(agentId, nextMessage);
 
       if (result.success) {
         successCount += 1;
         nextMessage = buildPipelineMessage(nextMessage, agentId, result.content);
       }
+
+      await updateAndPersistStep(taskId, index, {
+        status: result.success ? 'completed' : 'failed',
+        content: result.success ? result.content : result.error,
+        completedAt: new Date(),
+      });
 
       await appendResult(taskId, result, index + 1, totalSteps);
     }
@@ -200,11 +275,18 @@ export default function Tasks() {
     const totalSteps = advisorAgents.length > 0 ? advisorAgents.length + 2 : 1;
     let completedSteps = 0;
     let successCount = 0;
+    let stepIdx = 0;
 
+    await recordStep(taskId, stepIdx, masterAgent, `${masterAgent} 生成初稿`, 'running');
     const masterDraft = await executeProvider(masterAgent, message);
     if (masterDraft.success) {
       successCount += 1;
     }
+    await updateAndPersistStep(taskId, stepIdx, {
+      status: masterDraft.success ? 'completed' : 'failed',
+      content: masterDraft.success ? masterDraft.content : masterDraft.error,
+      completedAt: new Date(),
+    });
     completedSteps += 1;
     await appendResult(taskId, masterDraft, completedSteps, totalSteps);
 
@@ -214,6 +296,11 @@ export default function Tasks() {
         message,
         masterDraft.success ? masterDraft.content : '主AI未产出有效结果'
       );
+
+      for (let i = 0; i < advisorAgents.length; i += 1) {
+        stepIdx += 1;
+        await recordStep(taskId, stepIdx, advisorAgents[i], `${advisorAgents[i]} 评审`, 'running');
+      }
 
       const advisorResultRows = await Promise.all(
         advisorAgents.map(async (agentId) => {
@@ -229,17 +316,30 @@ export default function Tasks() {
           successCount += 1;
         }
 
+        await updateAndPersistStep(taskId, index + 1, {
+          status: result.success ? 'completed' : 'failed',
+          content: result.success ? result.content : result.error,
+          completedAt: new Date(),
+        });
+
         completedSteps += 1;
         await appendResult(taskId, result, completedSteps, totalSteps);
       }
     }
 
     if (advisorAgents.length > 0 && masterDraft.success) {
+      stepIdx += 1;
+      await recordStep(taskId, stepIdx, masterAgent, `${masterAgent} 综合反馈`, 'running');
       const finalMessage = buildMasterFinalizeMessage(message, masterDraft.content, advisorResults);
       const masterFinal = await executeProvider(masterAgent, finalMessage);
       if (masterFinal.success) {
         successCount += 1;
       }
+      await updateAndPersistStep(taskId, stepIdx, {
+        status: masterFinal.success ? 'completed' : 'failed',
+        content: masterFinal.success ? masterFinal.content : masterFinal.error,
+        completedAt: new Date(),
+      });
       completedSteps += 1;
       await appendResult(taskId, masterFinal, completedSteps, totalSteps);
     }

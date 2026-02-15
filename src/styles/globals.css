@@ -103,10 +103,6 @@ body,
   .agent-glow-opencode {
     box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
   }
-
-  .agent-glow-droid {
-    box-shadow: 0 0 20px rgba(236, 72, 153, 0.3);
-  }
 }
 
 /* 无障碍: 减少动画 */

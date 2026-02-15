@@ -5,7 +5,7 @@ import { AgentCard } from '../components/AgentCard';
 
 export default function Overview() {
   const { agents, getOnlineCount } = useAgentStore();
-  const { tasks } = useTaskStore();
+  const { tasks, getRecentEvents } = useTaskStore();
 
   const onlineCount = getOnlineCount();
   const totalAgents = agents.length;
@@ -16,6 +16,7 @@ export default function Overview() {
       agent.tasksCompleted > best.tasksCompleted ? agent : best
     )
     : null;
+  const recentEvents = getRecentEvents();
 
   return (
     <div className="flex-1 overflow-auto p-6">
@@ -109,28 +110,27 @@ export default function Overview() {
         <div className="card">
           <h2 className="text-lg font-medium text-text-primary mb-4">最近活动</h2>
           <div className="space-y-3">
-            {[
-              { time: '10:32', action: 'Codex 完成任务', type: 'success' },
-              { time: '10:28', action: 'Claude 回复', type: 'info' },
-              { time: '10:15', action: '新任务分配', type: 'info' },
-              { time: '10:05', action: 'Gemini 上线', type: 'success' },
-            ].map((activity, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="flex items-center gap-3 text-sm"
-              >
-                <span className="text-text-secondary w-12">{activity.time}</span>
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    activity.type === 'success' ? 'bg-success' : 'bg-accent'
-                  }`}
-                />
-                <span className="text-text-primary">{activity.action}</span>
-              </motion.div>
-            ))}
+            {recentEvents.length > 0 ? (
+              recentEvents.map((activity, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="flex items-center gap-3 text-sm"
+                >
+                  <span className="text-text-secondary w-12">{activity.time}</span>
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      activity.type === 'success' ? 'bg-success' : activity.type === 'error' ? 'bg-error' : 'bg-accent'
+                    }`}
+                  />
+                  <span className="text-text-primary">{activity.action}</span>
+                </motion.div>
+              ))
+            ) : (
+              <p className="text-text-secondary text-sm">暂无活动记录，创建你的第一个任务吧</p>
+            )}
           </div>
         </div>
       </div>
