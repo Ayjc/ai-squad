@@ -10,7 +10,7 @@ export default function Squad() {
     <div className="flex-1 overflow-auto p-6">
       {/* 头部 */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-text-primary">战队管理</h1>
+        <h1 className="text-2xl font-semibold text-text-primary">团队</h1>
         <div className="flex gap-2">
           <button className="btn-secondary flex items-center gap-2">
             <Plus className="w-4 h-4" />

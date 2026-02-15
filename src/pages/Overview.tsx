@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Plus, TrendingUp, Target, Zap } from 'lucide-react';
+import { Plus, Target, Zap, HeartHandshake } from 'lucide-react';
 import { useAgentStore, useTaskStore } from '../stores';
 import { AgentCard } from '../components/AgentCard';
 
@@ -11,7 +11,11 @@ export default function Overview() {
   const totalAgents = agents.length;
   const completedToday = tasks.filter(t => t.status === 'completed').length;
   const totalTasks = tasks.length || 12;
-  const power = agents.reduce((sum, a) => sum + a.tasksCompleted * 100 + a.level * 50, 0) || 2450;
+  const bestPartner = agents.length > 0
+    ? agents.reduce((best, agent) =>
+      agent.tasksCompleted > best.tasksCompleted ? agent : best
+    )
+    : null;
 
   return (
     <div className="flex-1 overflow-auto p-6">
@@ -29,6 +33,7 @@ export default function Overview() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ ease: 'easeOut' }}
           className="card"
         >
           <div className="flex items-center gap-3">
@@ -36,7 +41,7 @@ export default function Overview() {
               <Target className="w-5 h-5 text-success" />
             </div>
             <div>
-              <p className="text-text-secondary text-sm">战队状态</p>
+              <p className="text-text-secondary text-sm">团队状态</p>
               <p className="text-xl font-semibold text-text-primary">
                 {onlineCount}/{totalAgents} 在线
               </p>
@@ -47,7 +52,7 @@ export default function Overview() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.1, ease: 'easeOut' }}
           className="card"
         >
           <div className="flex items-center gap-3">
@@ -66,17 +71,22 @@ export default function Overview() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.2, ease: 'easeOut' }}
           className="card"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-warning/20 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-warning" />
+            <div
+              className="w-10 h-10 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: bestPartner ? `${bestPartner.color}20` : 'rgba(210, 153, 34, 0.2)' }}
+            >
+              <HeartHandshake className="w-5 h-5" style={{ color: bestPartner?.color ?? '#D29922' }} />
             </div>
             <div>
-              <p className="text-text-secondary text-sm">总战力</p>
+              <p className="text-text-secondary text-sm">最佳搭档</p>
               <p className="text-xl font-semibold text-text-primary">
-                ⚔️ {power.toLocaleString()}
+                {bestPartner && bestPartner.tasksCompleted > 0
+                  ? `${bestPartner.name} · ${bestPartner.tasksCompleted} 次协作`
+                  : '暂无协作数据'}
               </p>
             </div>
           </div>
@@ -85,9 +95,9 @@ export default function Overview() {
 
       {/* 主要内容区 */}
       <div className="grid grid-cols-2 gap-6">
-        {/* 战队状态 */}
+        {/* 团队状态 */}
         <div className="card">
-          <h2 className="text-lg font-medium text-text-primary mb-4">战队状态</h2>
+          <h2 className="text-lg font-medium text-text-primary mb-4">团队状态</h2>
           <div className="flex flex-wrap gap-3">
             {agents.map((agent) => (
               <AgentCard key={agent.id} agent={agent} />

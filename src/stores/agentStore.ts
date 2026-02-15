@@ -10,15 +10,18 @@ interface AgentState {
   updateAgentStatus: (id: string, status: AgentStatus) => void;
   syncProviderStatuses: (providers: ProviderRuntimeStatus[]) => void;
   incrementTasksCompleted: (id: string) => void;
+  incrementTasksFailed: (id: string) => void;
   getOnlineCount: () => number;
 }
 
-// 根据任务数计算等级
-const calculateLevel = (tasksCompleted: number): number => {
-  if (tasksCompleted < 5) return 1;
-  if (tasksCompleted < 15) return 2;
-  if (tasksCompleted < 30) return 3;
-  return Math.floor(tasksCompleted / 15) + 3;
+// 根据协作数据计算默契度
+const calculateSynergy = (tasksCompleted: number, tasksFailed: number = 0): number => {
+  const total = tasksCompleted + tasksFailed;
+  if (total === 0) return 0;
+  const frequencyScore = Math.min(100, total * 5);
+  const successRate = tasksCompleted / total;
+  const successScore = successRate * 100;
+  return Math.round(frequencyScore * 0.3 + successScore * 0.4 + frequencyScore * 0.3);
 };
 
 export const useAgentStore = create<AgentState>()(
@@ -30,9 +33,10 @@ export const useAgentStore = create<AgentState>()(
         const agents: Agent[] = Object.values(AGENT_CONFIGS).map((config) => ({
           ...config,
           status: 'offline' as AgentStatus,
-          level: 1,
+          level: 0,
           experience: 0,
           tasksCompleted: 0,
+          tasksFailed: 0,
         }));
         set({ agents });
       },
@@ -72,11 +76,26 @@ export const useAgentStore = create<AgentState>()(
           agents: state.agents.map((agent) => {
             if (agent.id !== id) return agent;
             const newTasksCompleted = agent.tasksCompleted + 1;
+            const currentTasksFailed = agent.tasksFailed ?? 0;
             return {
               ...agent,
               tasksCompleted: newTasksCompleted,
-              level: calculateLevel(newTasksCompleted),
+              level: calculateSynergy(newTasksCompleted, currentTasksFailed),
               experience: agent.experience + 100,
+            };
+          }),
+        }));
+      },
+
+      incrementTasksFailed: (id) => {
+        set((state) => ({
+          agents: state.agents.map((agent) => {
+            if (agent.id !== id) return agent;
+            const newTasksFailed = (agent.tasksFailed ?? 0) + 1;
+            return {
+              ...agent,
+              tasksFailed: newTasksFailed,
+              level: calculateSynergy(agent.tasksCompleted, newTasksFailed),
             };
           }),
         }));

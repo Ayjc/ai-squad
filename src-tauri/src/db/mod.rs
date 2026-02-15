@@ -89,6 +89,20 @@ pub fn init_database(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
     )?;
 
     conn.execute(
+        "CREATE TABLE IF NOT EXISTS collaboration_stats (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agent_combo TEXT NOT NULL,
+            mode TEXT NOT NULL,
+            total_tasks INTEGER DEFAULT 0,
+            success_count INTEGER DEFAULT 0,
+            avg_duration_ms INTEGER DEFAULT 0,
+            last_used_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )",
+        [],
+    )?;
+
+    conn.execute(
         "CREATE TABLE IF NOT EXISTS achievements (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
@@ -186,6 +200,24 @@ fn run_migrations(conn: &Connection) -> Result<(), rusqlite::Error> {
             [],
         )?;
         set_schema_version(conn, 2)?;
+        version = 2;
+    }
+
+    if version < 3 {
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS collaboration_stats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                agent_combo TEXT NOT NULL,
+                mode TEXT NOT NULL,
+                total_tasks INTEGER DEFAULT 0,
+                success_count INTEGER DEFAULT 0,
+                avg_duration_ms INTEGER DEFAULT 0,
+                last_used_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )",
+            [],
+        )?;
+        set_schema_version(conn, 3)?;
     }
 
     Ok(())

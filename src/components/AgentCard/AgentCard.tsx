@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { HeartHandshake } from 'lucide-react';
 import type { Agent } from '../../types/agent';
 import { clsx } from 'clsx';
 
@@ -34,12 +35,12 @@ export default function AgentCard({ agent, onAssignTask, onViewProgress, onConne
         </motion.div>
       </div>
 
-      {/* 名称和等级 */}
+      {/* 名称和默契度 */}
       <div className="text-center mb-2">
         <h3 className="font-semibold text-text-primary">{agent.name}</h3>
         <p className="text-sm text-text-secondary flex items-center justify-center gap-1">
-          <span>⚔️</span>
-          <span>等级 {agent.level}</span>
+          <HeartHandshake className="w-3.5 h-3.5" />
+          <span>默契 {agent.level}%</span>
         </p>
       </div>
 
@@ -69,15 +70,18 @@ export default function AgentCard({ agent, onAssignTask, onViewProgress, onConne
         </div>
       )}
 
-      {/* 能量条 */}
+      {/* 默契度条 */}
       {!isWorking && (
         <div className="mb-3">
-          <div className="h-1 bg-bg-primary rounded-full overflow-hidden">
+          <div className="h-1.5 bg-bg-primary rounded-full overflow-hidden">
             <div
-              className="h-full transition-all duration-300"
+              className={clsx(
+                'h-full rounded-full transition-all duration-500',
+                agent.level > 70 && 'shadow-[0_0_6px_currentColor]'
+              )}
               style={{
-                backgroundColor: agent.color,
-                width: `${Math.min(100, agent.tasksCompleted * 10)}%`
+                backgroundColor: agent.level < 30 ? '#8B949E' : agent.color,
+                width: `${agent.level}%`
               }}
             />
           </div>

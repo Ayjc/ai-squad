@@ -9,14 +9,15 @@ export interface Agent {
   avatar: string;                // 头像 URL 或 emoji
   color: string;                 // 专属配色
   status: AgentStatus;           // 在线状态
-  level: number;                 // 等级 (基于任务数计算)
-  experience: number;            // 经验值
+  level: number;                 // 默契度 0-100
+  experience: number;            // 协作积分
   tasksCompleted: number;        // 完成任务数
+  tasksFailed: number;           // 失败任务数
   currentTask?: string;          // 当前任务 ID
 }
 
 // 预定义的 Agent 配置
-export const AGENT_CONFIGS: Record<string, Omit<Agent, 'status' | 'level' | 'experience' | 'tasksCompleted' | 'currentTask'>> = {
+export const AGENT_CONFIGS: Record<string, Omit<Agent, 'status' | 'level' | 'experience' | 'tasksCompleted' | 'tasksFailed' | 'currentTask'>> = {
   codex: {
     id: 'codex',
     name: 'Codex',

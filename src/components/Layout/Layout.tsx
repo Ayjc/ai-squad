@@ -15,7 +15,7 @@ interface LayoutProps {
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: '概览' },
-  { to: '/squad', icon: Users, label: '战队' },
+  { to: '/squad', icon: Users, label: '团队' },
   { to: '/tasks', icon: ClipboardList, label: '任务' },
   { to: '/history', icon: History, label: '历史' },
 ];
@@ -36,15 +36,26 @@ export default function Layout({ children }: LayoutProps) {
             <NavLink
               key={item.to}
               to={item.to}
+              title={item.label}
               className={({ isActive }) =>
-                `w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
+                `group relative w-10 h-10 rounded-lg flex items-center justify-center transition-colors duration-200 ${
                   isActive
                     ? 'bg-accent/20 text-accent'
                     : 'text-text-secondary hover:text-text-primary hover:bg-bg-primary'
                 }`
               }
             >
-              <item.icon className="w-5 h-5" />
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-r bg-accent" />
+                  )}
+                  <item.icon className="w-5 h-5" />
+                  <span className="absolute left-12 px-2 py-1 rounded bg-bg-secondary border border-border-default text-xs text-text-primary whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 z-50">
+                    {item.label}
+                  </span>
+                </>
+              )}
             </NavLink>
           ))}
         </nav>

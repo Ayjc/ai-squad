@@ -74,7 +74,8 @@ body,
   }
 
   .status-online {
-    @apply status-dot bg-success animate-pulse;
+    @apply status-dot bg-success;
+    animation: breathe 2.5s ease-in-out infinite;
   }
 
   .status-offline {
@@ -82,7 +83,8 @@ body,
   }
 
   .status-working {
-    @apply status-dot bg-warning animate-pulse;
+    @apply status-dot bg-warning;
+    animation: breathe 1.5s ease-in-out infinite;
   }
 
   /* AI 角色光晕效果 */
@@ -107,7 +109,30 @@ body,
   }
 }
 
+/* 无障碍: 减少动画 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 键盘焦点样式 */
+:focus-visible {
+  outline: 2px solid #58A6FF;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 /* 动画 */
+@keyframes breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
