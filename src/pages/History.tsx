@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Download, Search, TrendingUp, TrendingDown } from 'lucide-react';
+import { Download, Search, TrendingUp, TrendingDown, Copy, Check } from 'lucide-react';
 import { useTaskStore } from '../stores';
-import { ACHIEVEMENTS } from '../types/common';
+import { MILESTONES } from '../types/common';
 import { TASK_MODE_INFO } from '../types/task';
 import { clsx } from 'clsx';
+import MarkdownRenderer from '../components/ResultView/MarkdownRenderer';
 
 interface HistoryResultItem {
   agentId: string;
@@ -96,9 +97,29 @@ const formatSeconds = (seconds: number) => {
   return `${minutes}m ${remainder}s`;
 };
 
+const formatExportDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function History() {
   const { tasks } = useTaskStore();
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+  const [copiedResultKey, setCopiedResultKey] = useState<string | null>(null);
+
+  const handleCopyResult = async (resultKey: string, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedResultKey(resultKey);
+      window.setTimeout(() => {
+        setCopiedResultKey((current) => (current === resultKey ? null : current));
+      }, 1500);
+    } catch (error) {
+      console.warn('复制结果失败:', error);
+    }
+  };
 
   const historyItems: HistoryItem[] = useMemo(() => {
     if (tasks.length === 0) {
@@ -129,6 +150,59 @@ export default function History() {
     }));
   }, [tasks]);
 
+  const handleExportHistory = () => {
+    const now = new Date();
+    const dateLabel = formatExportDate(now);
+    const markdownLines: string[] = [
+      '# AI Squad History Export',
+      '',
+      `导出时间: ${now.toLocaleString('zh-CN')}`,
+      '',
+    ];
+
+    historyItems.forEach((item, index) => {
+      markdownLines.push(`## ${index + 1}. ${item.title}`);
+      markdownLines.push(`- 时间: ${item.time}`);
+      markdownLines.push(`- Agent: ${item.agent}`);
+      markdownLines.push(`- 模式: ${item.mode}`);
+      markdownLines.push(`- 耗时: ${item.duration}`);
+      markdownLines.push(`- 状态: ${item.success ? '成功' : '失败'}`);
+      markdownLines.push('');
+
+      if (item.results.length === 0) {
+        markdownLines.push('- 结果: 无');
+        markdownLines.push('');
+      } else {
+        markdownLines.push('### 结果');
+        markdownLines.push('');
+        item.results.forEach((result, resultIndex) => {
+          markdownLines.push(`#### ${resultIndex + 1}. ${result.agentId}`);
+          markdownLines.push(`- 耗时: ${result.duration}`);
+          markdownLines.push(`- 成功: ${result.success ? '是' : '否'}`);
+          if (result.error) {
+            markdownLines.push(`- 错误: ${result.error}`);
+          }
+          markdownLines.push('');
+          markdownLines.push(result.content || '-');
+          markdownLines.push('');
+        });
+      }
+
+      markdownLines.push('---');
+      markdownLines.push('');
+    });
+
+    const blob = new Blob([markdownLines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ai-squad-history-${dateLabel}.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const stats = useMemo(() => {
     if (tasks.length === 0) {
       return {
@@ -137,6 +211,7 @@ export default function History() {
         avgDuration: '3m 42s',
         bestPartner: 'Claude',
         bestPartnerCount: 48,
+        bestPartnerTrend: 'up' as const,
       };
     }
 
@@ -168,12 +243,17 @@ export default function History() {
       }
     });
 
+    // 最佳拍档趋势
+    const bestTotal = bestPartnerCount + (agentCounter[bestPartner + '_failed'] ?? 0);
+    const bestPartnerTrend: 'up' | 'down' | 'stable' = bestPartnerCount > 5 ? 'up' : bestTotal > 0 ? 'stable' : 'stable';
+
     return {
       totalTasks,
       completionRate,
       avgDuration: formatSeconds(avgSeconds),
       bestPartner,
       bestPartnerCount,
+      bestPartnerTrend,
     };
   }, [tasks]);
 
@@ -181,7 +261,11 @@ export default function History() {
     <div className="flex-1 overflow-auto p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold text-text-primary">历史记录</h1>
-        <button className="btn-secondary flex items-center gap-2">
+        <button
+          type="button"
+          onClick={handleExportHistory}
+          className="btn-secondary flex items-center gap-2"
+        >
           <Download className="w-4 h-4" />
           导出
         </button>
@@ -211,7 +295,7 @@ export default function History() {
           { label: '总任务', value: stats.totalTasks, trend: '+12%', up: true },
           { label: '完成率', value: `${stats.completionRate}%`, trend: '+5%', up: true },
           { label: '平均耗时', value: stats.avgDuration, trend: '-30s', up: false },
-          { label: '最佳拍档', value: stats.bestPartner, subtext: `${stats.bestPartnerCount}次协作` },
+          { label: '最佳拍档', value: stats.bestPartner, subtext: `${stats.bestPartnerCount}次协作`, trend: stats.bestPartnerTrend === 'up' ? '+' : undefined, up: stats.bestPartnerTrend === 'up' },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -276,26 +360,42 @@ export default function History() {
 
                 {expanded && item.results.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-border-default space-y-2">
-                    {item.results.map((result, resultIndex) => (
-                      <div
-                        key={`${item.id}-${result.agentId}-${resultIndex}`}
-                        className="rounded-lg border border-border-default bg-bg-secondary/60 p-2"
-                      >
-                        <div className="flex items-center justify-between text-xs mb-1">
-                          <span className="text-text-primary font-medium">{result.agentId}</span>
-                          <span className="text-text-secondary">耗时 {result.duration}</span>
+                    {item.results.map((result, resultIndex) => {
+                      const resultKey = `${item.id}-${result.agentId}-${resultIndex}`;
+                      const copied = copiedResultKey === resultKey;
+                      return (
+                        <div
+                          key={resultKey}
+                          className="rounded-lg border border-border-default bg-bg-secondary/60 p-2"
+                        >
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="text-text-primary font-medium">{result.agentId}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-text-secondary">耗时 {result.duration}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyResult(resultKey, result.content || '')}
+                                className="inline-flex items-center justify-center rounded border border-border-default p-1 text-text-secondary hover:text-text-primary hover:bg-bg-primary transition-colors"
+                                title="复制 Markdown"
+                                aria-label="复制 Markdown"
+                              >
+                                {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
+                              </button>
+                            </div>
+                          </div>
+                          {result.error && (
+                            <p className="text-xs text-error mb-1">{result.error}</p>
+                          )}
+                          <MarkdownRenderer
+                            content={result.content || '-'}
+                            className={clsx(
+                              'text-xs max-h-28 overflow-y-auto',
+                              !result.success && '[&_*]:text-error/90'
+                            )}
+                          />
                         </div>
-                        {result.error && (
-                          <p className="text-xs text-error mb-1">{result.error}</p>
-                        )}
-                        <pre className={clsx(
-                          'text-xs whitespace-pre-wrap break-words max-h-28 overflow-y-auto',
-                          result.success ? 'text-text-secondary' : 'text-error/90'
-                        )}>
-                          {result.content || '-'}
-                        </pre>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </motion.div>
@@ -305,25 +405,40 @@ export default function History() {
       </div>
 
       <div className="card">
-        <h3 className="font-medium text-text-primary mb-4">成就墙 (v1 预览)</h3>
-        <div className="flex gap-3">
-          {ACHIEVEMENTS.map((achievement, index) => {
+        <h3 className="font-medium text-text-primary mb-4">协作里程碑</h3>
+        <div className="grid grid-cols-5 gap-3">
+          {MILESTONES.map((milestone, index) => {
             const isUnlocked = index < 2;
+            const progress = isUnlocked ? 100 : Math.min(100, Math.round((milestone.progress / milestone.requirement) * 100));
             return (
               <motion.div
-                key={achievement.id}
+                key={milestone.id}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: index * 0.1 }}
                 className={clsx(
-                  'w-16 h-20 rounded-lg flex flex-col items-center justify-center',
+                  'rounded-lg p-3 flex flex-col items-center text-center',
                   isUnlocked ? 'bg-bg-primary' : 'bg-bg-primary/50'
                 )}
               >
-                <span className="text-2xl">{isUnlocked ? achievement.icon : '🔒'}</span>
-                <span className="text-xs text-text-secondary mt-1">
-                  {isUnlocked ? achievement.name : '???'}
+                <span className="text-2xl mb-1">{isUnlocked ? milestone.icon : '🔒'}</span>
+                <span className="text-xs font-medium text-text-primary">
+                  {isUnlocked ? milestone.name : '???'}
                 </span>
+                {isUnlocked && (
+                  <span className="text-xs text-success mt-0.5">已达成</span>
+                )}
+                {!isUnlocked && (
+                  <div className="w-full mt-1.5">
+                    <div className="h-1 bg-border-default rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-accent rounded-full transition-all"
+                        style={{ width: progress + '%' }}
+                      />
+                    </div>
+                    <span className="text-xs text-text-secondary mt-0.5">{progress}%</span>
+                  </div>
+                )}
               </motion.div>
             );
           })}

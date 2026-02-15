@@ -164,3 +164,26 @@ body,
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
+
+/* Markdown prose overrides for dark theme */
+.prose {
+  --tw-prose-body: var(--text-secondary);
+  --tw-prose-headings: var(--text-primary);
+  --tw-prose-code: var(--accent);
+  --tw-prose-pre-bg: var(--bg-primary);
+  --tw-prose-pre-code: var(--text-primary);
+}
+.prose pre {
+  border: 1px solid var(--border-default);
+  border-radius: 0.5rem;
+}
+.prose code {
+  font-size: 0.8em;
+  padding: 0.15em 0.3em;
+  border-radius: 0.25rem;
+  background: var(--bg-primary);
+}
+.prose code::before,
+.prose code::after {
+  content: none;
+}

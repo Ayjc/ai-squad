@@ -24,6 +24,12 @@ fn main() {
             db::get_task_results,
             db::save_task_result,
             db::delete_task_results,
+            db::get_task_steps,
+            db::save_task_step,
+            db::delete_task_steps,
+            db::get_collaboration_stats,
+            db::upsert_collaboration_stat,
+            db::get_best_combo,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

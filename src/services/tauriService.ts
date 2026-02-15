@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { Task, TaskMode, TaskResult, TaskStatus } from '../types/task';
+import type { StepStatus, Task, TaskMode, TaskResult, TaskStatus, TaskStep } from '../types/task';
+import type { CollaborationStat } from '../types/common';
 
 export interface ProviderRuntimeStatus {
   id: string;
@@ -32,6 +33,29 @@ interface TaskResultRecord {
   completed_at: string | null;
 }
 
+interface TaskStepRecord {
+  id?: number | null;
+  task_id: string;
+  agent_id: string;
+  step_index: number;
+  title: string;
+  content: string | null;
+  status: string;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+interface CollaborationStatRecord {
+  id?: number | null;
+  agent_combo: string;
+  mode: string;
+  total_tasks: number;
+  success_count: number;
+  avg_duration_ms: number;
+  last_used_at: string | null;
+  created_at: string | null;
+}
+
 const toIsoString = (value?: Date | string): string | null => {
   if (!value) return null;
   const date = new Date(value);
@@ -40,6 +64,7 @@ const toIsoString = (value?: Date | string): string | null => {
 
 const TASK_STATUSES: TaskStatus[] = ['pending', 'running', 'completed', 'failed', 'cancelled'];
 const TASK_MODES: TaskMode[] = ['parallel', 'pipeline', 'master'];
+const STEP_STATUSES: StepStatus[] = ['pending', 'running', 'completed', 'failed'];
 
 const normalizeStatus = (status: string): TaskStatus => {
   return TASK_STATUSES.includes(status as TaskStatus) ? (status as TaskStatus) : 'pending';
@@ -47,6 +72,10 @@ const normalizeStatus = (status: string): TaskStatus => {
 
 const normalizeMode = (mode: string): TaskMode => {
   return TASK_MODES.includes(mode as TaskMode) ? (mode as TaskMode) : 'parallel';
+};
+
+const normalizeStepStatus = (status: string): StepStatus => {
+  return STEP_STATUSES.includes(status as StepStatus) ? (status as StepStatus) : 'pending';
 };
 
 const parseAssignees = (value: string): string[] => {
@@ -109,6 +138,47 @@ const mapTaskResultToRecord = (taskId: string, result: TaskResult): TaskResultRe
     error: result.error ?? null,
     started_at: toIsoString(result.startedAt),
     completed_at: toIsoString(result.completedAt),
+  };
+};
+
+const mapTaskStepRecord = (record: TaskStepRecord): TaskStep => {
+  return {
+    id: record.id ?? undefined,
+    taskId: record.task_id,
+    agentId: record.agent_id,
+    stepIndex: Number(record.step_index) || 0,
+    title: record.title,
+    content: record.content ?? undefined,
+    status: normalizeStepStatus(record.status),
+    startedAt: parseDate(record.started_at),
+    completedAt: parseDate(record.completed_at),
+  };
+};
+
+const mapTaskStepToRecord = (step: TaskStep): TaskStepRecord => {
+  return {
+    id: step.id ?? null,
+    task_id: step.taskId,
+    agent_id: step.agentId,
+    step_index: step.stepIndex,
+    title: step.title,
+    content: step.content ?? null,
+    status: step.status,
+    started_at: toIsoString(step.startedAt),
+    completed_at: toIsoString(step.completedAt),
+  };
+};
+
+const mapCollaborationStatRecord = (record: CollaborationStatRecord): CollaborationStat => {
+  return {
+    id: record.id ?? undefined,
+    agentCombo: record.agent_combo,
+    mode: record.mode,
+    totalTasks: Number(record.total_tasks) || 0,
+    successCount: Number(record.success_count) || 0,
+    avgDurationMs: Number(record.avg_duration_ms) || 0,
+    lastUsedAt: parseDate(record.last_used_at),
+    createdAt: parseDate(record.created_at),
   };
 };
 
@@ -178,6 +248,78 @@ export async function saveTask(task: Task): Promise<boolean> {
   } catch (error) {
     console.warn('Tauri save_task 调用失败:', error);
     return false;
+  }
+}
+
+export async function getTaskSteps(taskId: string): Promise<TaskStep[] | null> {
+  try {
+    const records = await invoke<TaskStepRecord[]>('get_task_steps', { taskId });
+    return records.map(mapTaskStepRecord);
+  } catch (error) {
+    console.warn('Tauri get_task_steps 调用失败:', error);
+    return null;
+  }
+}
+
+export async function saveTaskStep(step: TaskStep): Promise<number | null> {
+  try {
+    return await invoke<number>('save_task_step', { step: mapTaskStepToRecord(step) });
+  } catch (error) {
+    console.warn('Tauri save_task_step 调用失败:', error);
+    return null;
+  }
+}
+
+export async function deleteTaskSteps(taskId: string): Promise<boolean> {
+  try {
+    await invoke('delete_task_steps', { taskId });
+    return true;
+  } catch (error) {
+    console.warn('Tauri delete_task_steps 调用失败:', error);
+    return false;
+  }
+}
+
+export async function getCollaborationStats(): Promise<CollaborationStat[] | null> {
+  try {
+    const records = await invoke<CollaborationStatRecord[]>('get_collaboration_stats');
+    return records.map(mapCollaborationStatRecord);
+  } catch (error) {
+    console.warn('Tauri get_collaboration_stats 调用失败:', error);
+    return null;
+  }
+}
+
+export async function upsertCollaborationStat(
+  agentCombo: string,
+  mode: string,
+  success: boolean,
+  durationMs: number
+): Promise<boolean> {
+  try {
+    await invoke('upsert_collaboration_stat', {
+      agentCombo,
+      mode,
+      success,
+      durationMs,
+    });
+    return true;
+  } catch (error) {
+    console.warn('Tauri upsert_collaboration_stat 调用失败:', error);
+    return false;
+  }
+}
+
+export async function getBestCombo(): Promise<CollaborationStat | null> {
+  try {
+    const record = await invoke<CollaborationStatRecord | null>('get_best_combo');
+    if (!record) {
+      return null;
+    }
+    return mapCollaborationStatRecord(record);
+  } catch (error) {
+    console.warn('Tauri get_best_combo 调用失败:', error);
+    return null;
   }
 }
 

@@ -12,6 +12,20 @@ export interface TaskResult {
   error?: string;                // 错误信息
 }
 
+export type StepStatus = 'pending' | 'running' | 'completed' | 'failed';
+
+export interface TaskStep {
+  id?: number;
+  taskId: string;
+  agentId: string;
+  stepIndex: number;
+  title: string;
+  content?: string;
+  status: StepStatus;
+  startedAt?: Date;
+  completedAt?: Date;
+}
+
 export interface Task {
   id: string;                    // 任务唯一 ID
   title: string;                 // 任务标题

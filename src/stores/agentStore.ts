@@ -12,6 +12,8 @@ interface AgentState {
   incrementTasksCompleted: (id: string) => void;
   incrementTasksFailed: (id: string) => void;
   getOnlineCount: () => number;
+  getRecommendedAgents: () => Agent[];
+  getSynergyTrend: (id: string) => 'up' | 'down' | 'stable';
 }
 
 // 根据协作数据计算默契度
@@ -103,6 +105,32 @@ export const useAgentStore = create<AgentState>()(
 
       getOnlineCount: () => {
         return get().agents.filter((a) => a.status !== 'offline').length;
+      },
+
+      getRecommendedAgents: () => {
+        const sortedByLevelDesc = (items: Agent[]) =>
+          [...items].sort((left, right) => right.level - left.level);
+
+        const allAgents = get().agents;
+        const onlineAgents = allAgents.filter((agent) => agent.status !== 'offline');
+
+        if (onlineAgents.length > 0) {
+          return sortedByLevelDesc(onlineAgents);
+        }
+
+        return sortedByLevelDesc(allAgents);
+      },
+
+      getSynergyTrend: (id: string) => {
+        const agent = get().agents.find((a) => a.id === id);
+        if (!agent) return 'stable';
+        const total = agent.tasksCompleted + (agent.tasksFailed ?? 0);
+        if (total < 3) return 'stable';
+        // 成功率 > 70% 视为上升趋势，< 40% 视为下降
+        const successRate = agent.tasksCompleted / total;
+        if (successRate > 0.7) return 'up';
+        if (successRate < 0.4) return 'down';
+        return 'stable';
       },
     }),
     {

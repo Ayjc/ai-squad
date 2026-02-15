@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus } from 'lucide-react';
+import { Plus, Sparkles, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { useAgentStore, useTaskStore } from '../stores';
 import type { Task, TaskMode, TaskResult } from '../types/task';
 import { TASK_MODE_INFO } from '../types/task';
 import { clsx } from 'clsx';
-import { askProvider, saveTask } from '../services/tauriService';
+import { askProvider, saveTask, upsertCollaborationStat } from '../services/tauriService';
 
 const modes: TaskMode[] = ['parallel', 'pipeline', 'master'];
 
@@ -56,7 +56,7 @@ export default function Tasks() {
     updateTaskProgress,
     addTaskResult,
   } = useTaskStore();
-  const { agents } = useAgentStore();
+  const { getRecommendedAgents, getSynergyTrend } = useAgentStore();
 
   const [selectedMode, setSelectedMode] = useState<TaskMode>('parallel');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -67,13 +67,18 @@ export default function Tasks() {
   const [submitError, setSubmitError] = useState('');
 
   const assigneeOptions = useMemo(() => {
-    return agents.map((agent) => ({
+    return getRecommendedAgents().map((agent) => ({
       id: agent.id,
       name: agent.name,
       displayName: agent.displayName,
+      level: agent.level,
       status: agent.status,
+      trend: getSynergyTrend(agent.id),
     }));
-  }, [agents]);
+  }, [getRecommendedAgents, getSynergyTrend]);
+
+  const topRecommendedAgentId = assigneeOptions[0]?.id;
+  const topRecommendedAgent = assigneeOptions[0];
 
   const pendingTasks = tasks.filter(t => t.status === 'pending');
   const runningTasks = tasks.filter(t => t.status === 'running');
@@ -250,6 +255,7 @@ export default function Tasks() {
     taskDescription: string
   ) => {
     updateTaskStatus(taskId, 'running');
+    const runStartedAt = Date.now();
     await persistTask(taskId);
 
     const message = buildTaskMessage(taskTitle, taskDescription);
@@ -261,6 +267,18 @@ export default function Tasks() {
       summary = await runPipelineTask(taskId, assignees, message);
     } else {
       summary = await runMasterTask(taskId, assignees, message);
+    }
+
+    const agentCombo = [...assignees].sort().join('+');
+    const durationMs = Math.max(0, Date.now() - runStartedAt);
+    const tracked = await upsertCollaborationStat(
+      agentCombo,
+      mode,
+      summary.successCount > 0,
+      durationMs
+    );
+    if (!tracked) {
+      console.warn('协作统计记录失败', { taskId, agentCombo, mode });
     }
 
     updateTaskProgress(taskId, 100);
@@ -497,9 +515,18 @@ export default function Tasks() {
 
               <div>
                 <label className="block text-sm text-text-secondary mb-2">执行 AI</label>
+                {selectedAssignees.length === 0 && topRecommendedAgent && (
+                  <div className="flex items-center gap-1.5 text-sm text-text-secondary mb-2">
+                    <Sparkles className="w-4 h-4 text-accent" />
+                    <span>
+                      根据默契度推荐：{topRecommendedAgent.name} (默契 {topRecommendedAgent.level})
+                    </span>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   {assigneeOptions.map((agent) => {
                     const checked = selectedAssignees.includes(agent.id);
+                    const isTopRecommended = agent.id === topRecommendedAgentId;
                     return (
                       <button
                         key={agent.id}
@@ -512,9 +539,22 @@ export default function Tasks() {
                             : 'border-border-default text-text-secondary hover:text-text-primary'
                         )}
                       >
-                        <p className="text-sm font-medium">{agent.name}</p>
+                        <p className="text-sm font-medium flex items-center gap-1.5">
+                          <span>{agent.name}</span>
+                          {isTopRecommended && (
+                            <span className="bg-accent/15 text-accent text-xs px-1.5 py-0.5 rounded">
+                              推荐
+                            </span>
+                          )}
+                        </p>
                         <p className="text-xs">{agent.displayName}</p>
-                        <p className="text-xs mt-1">状态: {agent.status}</p>
+                        <p className="text-text-secondary text-xs mt-1 flex items-center gap-1">
+                          默契 {agent.level}
+                          {agent.trend === 'up' && <TrendingUp className="w-3 h-3 text-success" />}
+                          {agent.trend === 'down' && <TrendingDown className="w-3 h-3 text-error" />}
+                          {agent.trend === 'stable' && <Minus className="w-3 h-3 text-text-secondary" />}
+                        </p>
+                        <p className="text-text-secondary text-xs mt-1">状态: {agent.status}</p>
                       </button>
                     );
                   })}
