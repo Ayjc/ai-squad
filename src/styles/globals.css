@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 基础样式重置 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #161B22;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #30363D;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #484F58;
+}
+
+/* Tabular 数字 */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 自定义组件样式 */
+@layer components {
+  /* 卡片基础样式 */
+  .card {
+    @apply bg-bg-secondary border border-border-default rounded-lg p-4;
+  }
+
+  .card-hover {
+    @apply card transition-all duration-150 hover:border-accent/50 hover:shadow-lg hover:shadow-accent/5;
+  }
+
+  /* 按钮样式 */
+  .btn {
+    @apply px-4 py-2 rounded-md font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-accent text-bg-primary hover:bg-accent/90;
+  }
+
+  .btn-secondary {
+    @apply btn bg-bg-secondary border border-border-default text-text-primary hover:bg-border-default;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent text-text-secondary hover:text-text-primary hover:bg-bg-secondary;
+  }
+
+  /* 状态指示器 */
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .status-online {
+    @apply status-dot bg-success animate-pulse;
+  }
+
+  .status-offline {
+    @apply status-dot bg-text-secondary;
+  }
+
+  .status-working {
+    @apply status-dot bg-warning animate-pulse;
+  }
+
+  /* AI 角色光晕效果 */
+  .agent-glow-codex {
+    box-shadow: 0 0 20px rgba(16, 163, 127, 0.3);
+  }
+
+  .agent-glow-claude {
+    box-shadow: 0 0 20px rgba(217, 119, 6, 0.3);
+  }
+
+  .agent-glow-gemini {
+    box-shadow: 0 0 20px rgba(66, 133, 244, 0.3);
+  }
+
+  .agent-glow-opencode {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+  }
+
+  .agent-glow-droid {
+    box-shadow: 0 0 20px rgba(236, 72, 153, 0.3);
+  }
+}
+
+/* 动画 */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* 进度条动画 */
+.progress-animated {
+  background: linear-gradient(
+    90deg,
+    currentColor 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    currentColor 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
