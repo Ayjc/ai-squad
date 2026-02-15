@@ -14,3 +14,9 @@ src-tauri/gen/
 # Local env
 .env
 .env.*
+
+# docs
+docs/
+
+#ccb
+.ccb
