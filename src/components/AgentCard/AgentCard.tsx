@@ -16,64 +16,73 @@ export default function AgentCard({ agent, onAssignTask, onViewProgress, onConne
 
   return (
     <motion.div
-      whileHover={{ y: -2 }}
+      layout
+      whileHover={{ y: -4 }}
       className={clsx(
-        'card-hover cursor-pointer',
+        'card-hover cursor-pointer p-6 rounded-xl bg-surface-card border border-border-subtle transition-colors duration-300',
         isOnline && `agent-glow-${agent.id}`
       )}
-      style={{ borderColor: isOnline ? `${agent.color}40` : undefined }}
     >
       {/* 头像 */}
-      <div className="flex justify-center mb-3">
+      <motion.div layout className="flex justify-center mb-4">
         <motion.div
           animate={isWorking ? { scale: [1, 1.05, 1] } : {}}
           transition={{ repeat: Infinity, duration: 2 }}
-          className="w-16 h-16 rounded-full flex items-center justify-center text-3xl"
-          style={{ backgroundColor: `${agent.color}20` }}
+          className="w-16 h-16 rounded-full flex items-center justify-center text-3xl shadow-sm relative z-10 bg-bg-surface"
+          style={{ color: agent.color }}
         >
           {agent.avatar}
         </motion.div>
-      </div>
+      </motion.div>
 
       {/* 名称和默契度 */}
-      <div className="text-center mb-2">
-        <h3 className="font-semibold text-text-primary">{agent.name}</h3>
-        <p className="text-sm text-text-secondary flex items-center justify-center gap-1">
+      <motion.div layout className="text-center mb-4">
+        <h3 className="text-lg font-bold text-text-primary tracking-tight mb-1">{agent.name}</h3>
+        <p className="text-sm text-text-secondary flex items-center justify-center gap-1.5">
           <HeartHandshake className="w-3.5 h-3.5" />
           <span>默契 {agent.level}%</span>
         </p>
-      </div>
+      </motion.div>
 
       {/* 状态 */}
-      <div className="flex items-center justify-center gap-2 mb-3">
+      <motion.div layout className="flex items-center justify-center gap-2 mb-6">
         <span className={clsx(
-          'status-dot',
+          'status-dot ring-2 ring-surface-card',
           isOnline && !isWorking && 'status-online',
           isWorking && 'status-working',
           !isOnline && 'status-offline'
         )} />
-        <span className="text-sm text-text-secondary">
+        <span className="text-sm font-medium text-text-secondary">
           {isOnline ? (isWorking ? '工作中' : '空闲') : '离线'}
         </span>
-      </div>
+      </motion.div>
 
       {/* 进度条 (工作中时显示) */}
       {isWorking && (
-        <div className="mb-3">
-          <div className="h-1 bg-bg-primary rounded-full overflow-hidden">
+        <motion.div layout className="mb-6">
+          <div className="h-2 bg-surface-hover/50 rounded-full overflow-hidden">
             <motion.div
-              className="h-full progress-animated"
+              layout
+              className="h-full rounded-full"
               style={{ backgroundColor: agent.color, width: '60%' }}
+              animate={{
+                backgroundPosition: ['0% 0%', '100% 100%'],
+              }}
+              transition={{
+                duration: 1,
+                ease: "linear",
+                repeat: Infinity,
+              }}
             />
           </div>
-          <p className="text-xs text-text-secondary text-center mt-1">📝 正在处理...</p>
-        </div>
+          <p className="text-xs font-medium text-text-secondary text-center mt-2">📝 正在处理...</p>
+        </motion.div>
       )}
 
       {/* 默契度条 */}
       {!isWorking && (
-        <div className="mb-3">
-          <div className="h-1.5 bg-bg-primary rounded-full overflow-hidden">
+        <motion.div layout className="mb-6">
+          <div className="h-2 bg-surface-hover/50 rounded-full overflow-hidden">
             <div
               className={clsx(
                 'h-full rounded-full transition-all duration-500',
@@ -85,15 +94,16 @@ export default function AgentCard({ agent, onAssignTask, onViewProgress, onConne
               }}
             />
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* 操作按钮 */}
-      <div className="flex justify-center gap-2">
+      <motion.div layout className="flex justify-center gap-3">
         {isOnline && !isWorking && (
           <button
             onClick={onAssignTask}
-            className="btn-ghost text-xs py-1 px-3"
+            aria-label={`分配任务给 ${agent.name}`}
+            className="btn-ghost text-xs font-medium py-2 px-4 rounded-lg hover:bg-surface-hover transition-colors"
           >
             分配任务
           </button>
@@ -101,7 +111,8 @@ export default function AgentCard({ agent, onAssignTask, onViewProgress, onConne
         {isWorking && (
           <button
             onClick={onViewProgress}
-            className="btn-ghost text-xs py-1 px-3"
+            aria-label={`查看 ${agent.name} 的进度`}
+            className="btn-ghost text-xs font-medium py-2 px-4 rounded-lg hover:bg-surface-hover transition-colors"
           >
             查看进度
           </button>
@@ -109,12 +120,13 @@ export default function AgentCard({ agent, onAssignTask, onViewProgress, onConne
         {!isOnline && (
           <button
             onClick={onConnect}
-            className="btn-ghost text-xs py-1 px-3"
+            aria-label={`连接 ${agent.name}`}
+            className="btn-ghost text-xs font-medium py-2 px-4 rounded-lg hover:bg-surface-hover transition-colors"
           >
             连接
           </button>
         )}
-      </div>
+      </motion.div>
     </motion.div>
   );
 }

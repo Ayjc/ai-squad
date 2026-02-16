@@ -9,6 +9,37 @@ import { clsx } from 'clsx';
 import MarkdownRenderer from '../components/ResultView/MarkdownRenderer';
 import { TaskDetail } from '../components/TaskDetail';
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.1
+    }
+  },
+  exit: {
+    opacity: 0,
+    y: -10,
+    transition: {
+      duration: 0.2,
+      ease: 'easeIn'
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.25,
+      ease: 'easeOut'
+    }
+  }
+};
+
 interface HistoryResultItem {
   agentId: string;
   duration: string;
@@ -281,8 +312,14 @@ export default function History() {
   const detailTask = detailTaskId ? tasks.find((t) => t.id === detailTaskId) : null;
 
   return (
-    <div className="flex-1 overflow-auto p-6">
-      <div className="flex items-center justify-between mb-6">
+    <motion.div
+      className="flex-1 overflow-auto p-6"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+    >
+      <motion.div variants={itemVariants} className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold text-text-primary">历史记录</h1>
         <button
           type="button"
@@ -292,9 +329,9 @@ export default function History() {
           <Download className="w-4 h-4" />
           导出
         </button>
-      </div>
+      </motion.div>
 
-      <div className="card mb-6">
+      <motion.div variants={itemVariants} className="card mb-6">
         <div className="flex gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
@@ -313,20 +350,18 @@ export default function History() {
             <option>本月</option>
           </select>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <motion.div variants={itemVariants} className="grid grid-cols-4 gap-4 mb-6">
         {[
           { label: '总任务', value: stats.totalTasks, trend: '+12%', up: true },
           { label: '完成率', value: `${stats.completionRate}%`, trend: '+5%', up: true },
           { label: '平均耗时', value: stats.avgDuration, trend: '-30s', up: false },
           { label: '最佳拍档', value: stats.bestPartner, subtext: `${stats.bestPartnerCount}次协作`, trend: stats.bestPartnerTrend === 'up' ? '+' : undefined, up: stats.bestPartnerTrend === 'up' },
-        ].map((stat, index) => (
+        ].map((stat) => (
           <motion.div
             key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
+            variants={itemVariants}
             className="card"
           >
             <p className="text-text-secondary text-sm mb-1">{stat.label}</p>
@@ -345,9 +380,9 @@ export default function History() {
             )}
           </motion.div>
         ))}
-      </div>
+      </motion.div>
 
-      <div className="card mb-6">
+      <motion.div variants={itemVariants} className="card mb-6">
         <h3 className="font-medium text-text-primary mb-4">今天</h3>
         <div className="space-y-3">
           {historyItems.map((item, index) => {
@@ -357,7 +392,7 @@ export default function History() {
                 key={item.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
+                transition={{ delay: index * 0.05, duration: 0.25, ease: 'easeOut' }}
                 className="p-3 rounded-lg bg-bg-primary hover:bg-bg-primary/80 transition-colors cursor-pointer"
                 onClick={() => {
                   if (!item.id.startsWith('demo-')) {
@@ -438,21 +473,19 @@ export default function History() {
             );
           })}
         </div>
-      </div>
+      </motion.div>
 
-      <div className="card">
+      <motion.div variants={itemVariants} className="card">
         <h3 className="font-medium text-text-primary mb-4">协作里程碑</h3>
         <div className="grid grid-cols-5 gap-3">
-          {MILESTONES.map((milestone, index) => {
+          {MILESTONES.map((milestone) => {
             const progressData = milestoneProgress.find((m) => m.id === milestone.id);
             const isUnlocked = progressData?.unlocked ?? false;
             const progress = isUnlocked ? 100 : Math.min(100, Math.round(((progressData?.progress ?? 0) / milestone.requirement) * 100));
             return (
               <motion.div
                 key={milestone.id}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.1 }}
+                variants={itemVariants}
                 className={clsx(
                   'rounded-lg p-3 flex flex-col items-center text-center',
                   isUnlocked ? 'bg-bg-primary' : 'bg-bg-primary/50'
@@ -480,13 +513,13 @@ export default function History() {
             );
           })}
         </div>
-      </div>
+      </motion.div>
 
       <AnimatePresence>
         {detailTask && (
           <TaskDetail task={detailTask} onClose={() => setDetailTaskId(null)} />
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }

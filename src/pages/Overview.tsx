@@ -3,6 +3,37 @@ import { Plus, Target, Zap, HeartHandshake } from 'lucide-react';
 import { useAgentStore, useTaskStore } from '../stores';
 import { AgentCard } from '../components/AgentCard';
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.1
+    }
+  },
+  exit: {
+    opacity: 0,
+    y: -10,
+    transition: {
+      duration: 0.2,
+      ease: 'easeIn'
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.25,
+      ease: 'easeOut'
+    }
+  }
+};
+
 export default function Overview() {
   const { agents, getOnlineCount } = useAgentStore();
   const { tasks, getRecentEvents } = useTaskStore();
@@ -19,121 +50,123 @@ export default function Overview() {
   const recentEvents = getRecentEvents();
 
   return (
-    <div className="flex-1 overflow-auto p-6">
-      {/* 头部 */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-text-primary">概览</h1>
-        <button className="btn-primary flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          快速任务
-        </button>
-      </div>
-
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ease: 'easeOut' }}
-          className="card"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center">
-              <Target className="w-5 h-5 text-success" />
-            </div>
-            <div>
-              <p className="text-text-secondary text-sm">团队状态</p>
-              <p className="text-xl font-semibold text-text-primary">
-                {onlineCount}/{totalAgents} 在线
-              </p>
-            </div>
-          </div>
+    <motion.div
+      className="flex-1 overflow-auto p-4 md:p-8"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+    >
+      <div className="max-w-7xl mx-auto">
+        {/* 头部 */}
+        <motion.div variants={itemVariants} className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold tracking-tight text-text-primary">概览</h1>
+          <button className="btn-primary flex items-center gap-2 rounded-lg px-4 py-2 min-h-[44px]">
+            <Plus className="w-4 h-4" />
+            快速任务
+          </button>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, ease: 'easeOut' }}
-          className="card"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center">
-              <Zap className="w-5 h-5 text-accent" />
+        {/* 统计卡片 */}
+        <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8">
+          <motion.div
+            variants={itemVariants}
+            className="card p-6 rounded-xl"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-bg-surface flex items-center justify-center">
+                <Target className="w-6 h-6 text-success" />
+              </div>
+              <div>
+                <p className="text-text-secondary text-sm font-medium mb-1">团队状态</p>
+                <p className="text-2xl font-bold text-text-primary tracking-tight">
+                  {onlineCount}/{totalAgents} <span className="text-base font-normal text-text-tertiary">在线</span>
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-text-secondary text-sm">今日任务</p>
-              <p className="text-xl font-semibold text-text-primary">
-                {totalTasks} 个 · {completedToday} 完成
-              </p>
+          </motion.div>
+
+          <motion.div
+            variants={itemVariants}
+            className="card p-6 rounded-xl"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-bg-surface flex items-center justify-center">
+                <Zap className="w-6 h-6 text-accent" />
+              </div>
+              <div>
+                <p className="text-text-secondary text-sm font-medium mb-1">今日任务</p>
+                <p className="text-2xl font-bold text-text-primary tracking-tight">
+                  {totalTasks} <span className="text-base font-normal text-text-tertiary">个</span> · {completedToday} <span className="text-base font-normal text-text-tertiary">完成</span>
+                </p>
+              </div>
             </div>
-          </div>
+          </motion.div>
+
+          <motion.div
+            variants={itemVariants}
+            className="card p-6 rounded-xl"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-bg-surface flex items-center justify-center">
+                <HeartHandshake className="w-6 h-6" style={{ color: bestPartner?.color ?? '#C89A3F' }} />
+              </div>
+              <div>
+                <p className="text-text-secondary text-sm font-medium mb-1">最佳搭档</p>
+                <p className="text-lg font-bold text-text-primary tracking-tight truncate max-w-[180px]">
+                  {bestPartner && bestPartner.tasksCompleted > 0
+                    ? `${bestPartner.name} · ${bestPartner.tasksCompleted} 次`
+                    : '暂无协作数据'}
+                </p>
+              </div>
+            </div>
+          </motion.div>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, ease: 'easeOut' }}
-          className="card"
-        >
-          <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: bestPartner ? `${bestPartner.color}20` : 'rgba(210, 153, 34, 0.2)' }}
-            >
-              <HeartHandshake className="w-5 h-5" style={{ color: bestPartner?.color ?? '#D29922' }} />
+        {/* 主要内容区 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+          {/* 团队状态 */}
+          <motion.div variants={itemVariants} className="card p-6 rounded-xl">
+            <h2 className="text-xl font-semibold text-text-primary mb-6">团队状态</h2>
+            <div className="flex flex-wrap gap-4 justify-center sm:justify-start">
+              {agents.map((agent) => (
+                <AgentCard key={agent.id} agent={agent} />
+              ))}
             </div>
-            <div>
-              <p className="text-text-secondary text-sm">最佳搭档</p>
-              <p className="text-xl font-semibold text-text-primary">
-                {bestPartner && bestPartner.tasksCompleted > 0
-                  ? `${bestPartner.name} · ${bestPartner.tasksCompleted} 次协作`
-                  : '暂无协作数据'}
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      </div>
+          </motion.div>
 
-      {/* 主要内容区 */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* 团队状态 */}
-        <div className="card">
-          <h2 className="text-lg font-medium text-text-primary mb-4">团队状态</h2>
-          <div className="flex flex-wrap gap-3">
-            {agents.map((agent) => (
-              <AgentCard key={agent.id} agent={agent} />
-            ))}
-          </div>
+          {/* 最近活动 */}
+          <motion.div variants={itemVariants} className="card p-6 rounded-xl">
+            <h2 className="text-xl font-semibold text-text-primary mb-6">最近活动</h2>
+            <div className="space-y-4">
+              {recentEvents.length > 0 ? (
+                recentEvents.map((activity, i) => (
+                  <motion.div
+                    key={i}
+                    variants={itemVariants}
+                    className="flex items-center gap-4 text-sm group"
+                  >
+                    <span className="text-text-tertiary w-14 font-mono text-xs">{activity.time}</span>
+                    <div className="relative flex items-center justify-center w-4">
+                      <span
+                        className={`w-2 h-2 rounded-full ${
+                          activity.type === 'success' ? 'bg-success shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 
+                          activity.type === 'error' ? 'bg-error shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'bg-accent shadow-[0_0_8px_rgba(59,130,246,0.4)]'
+                        }`}
+                      />
+                      <div className="absolute h-full w-px bg-border-subtle top-4 -z-10 group-last:hidden" />
+                    </div>
+                    <span className="text-text-secondary group-hover:text-text-primary transition-colors">{activity.action}</span>
+                  </motion.div>
+                ))
+              ) : (
+                <p className="text-text-secondary text-sm">暂无活动记录，创建你的第一个任务吧</p>
+              )}
+            </div>
+          </motion.div>
         </div>
-
-        {/* 最近活动 */}
-        <div className="card">
-          <h2 className="text-lg font-medium text-text-primary mb-4">最近活动</h2>
-          <div className="space-y-3">
-            {recentEvents.length > 0 ? (
-              recentEvents.map((activity, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="flex items-center gap-3 text-sm"
-                >
-                  <span className="text-text-secondary w-12">{activity.time}</span>
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      activity.type === 'success' ? 'bg-success' : activity.type === 'error' ? 'bg-error' : 'bg-accent'
-                    }`}
-                  />
-                  <span className="text-text-primary">{activity.action}</span>
-                </motion.div>
-              ))
-            ) : (
-              <p className="text-text-secondary text-sm">暂无活动记录，创建你的第一个任务吧</p>
-            )}
-          </div>
-        </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
+

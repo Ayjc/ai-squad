@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import Layout from './components/Layout/Layout';
 import Overview from './pages/Overview';
 import Squad from './pages/Squad';
@@ -10,6 +11,7 @@ import { useAgentStore, useTaskStore } from './stores';
 import { getProviders, getTasks } from './services/tauriService';
 
 function App() {
+  const location = useLocation();
   const {
     agents,
     initializeAgents,
@@ -41,13 +43,15 @@ function App() {
 
   return (
     <Layout>
-      <Routes>
-        <Route path="/" element={<Overview />} />
-        <Route path="/squad" element={<Squad />} />
-        <Route path="/tasks" element={<Tasks />} />
-        <Route path="/history" element={<History />} />
-        <Route path="/settings" element={<Settings />} />
-      </Routes>
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={<Overview />} />
+          <Route path="/squad" element={<Squad />} />
+          <Route path="/tasks" element={<Tasks />} />
+          <Route path="/history" element={<History />} />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </AnimatePresence>
     </Layout>
   );
 }

@@ -10,6 +10,37 @@ import { askProvider, saveTask, saveTaskStep, upsertCollaborationStat } from '..
 
 const modes: TaskMode[] = ['parallel', 'pipeline', 'master'];
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.1
+    }
+  },
+  exit: {
+    opacity: 0,
+    y: -10,
+    transition: {
+      duration: 0.2,
+      ease: 'easeIn'
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.25,
+      ease: 'easeOut'
+    }
+  }
+};
+
 interface DemoTask {
   id: string;
   title: string;
@@ -451,7 +482,7 @@ export default function Tasks() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      transition={{ delay: index * 0.1 }}
+      transition={{ delay: index * 0.1, duration: 0.25, ease: 'easeOut' }}
       className="card-hover"
     >
       <h4 className="font-medium text-text-primary mb-2">{task.title}</h4>
@@ -466,8 +497,14 @@ export default function Tasks() {
   );
 
   return (
-    <div className="flex-1 overflow-auto p-6">
-      <div className="flex items-center justify-between mb-6">
+    <motion.div
+      className="flex-1 overflow-auto p-6"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+    >
+      <motion.div variants={itemVariants} className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold text-text-primary">任务中心</h1>
         <button
           onClick={() => setIsCreateOpen(true)}
@@ -476,9 +513,9 @@ export default function Tasks() {
           <Plus className="w-4 h-4" />
           新建任务
         </button>
-      </div>
+      </motion.div>
 
-      <div className="card mb-6">
+      <motion.div variants={itemVariants} className="card mb-6">
         <div className="flex gap-4 mb-2">
           {modes.map((mode) => {
             const info = TASK_MODE_INFO[mode];
@@ -501,9 +538,9 @@ export default function Tasks() {
         <p className="text-sm text-text-secondary">
           当前: {TASK_MODE_INFO[selectedMode].label} - {TASK_MODE_INFO[selectedMode].description}
         </p>
-      </div>
+      </motion.div>
 
-      <div className="grid grid-cols-4 gap-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-4 gap-4">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-medium text-text-primary">等待中 ({pendingTasks.length || 2})</h3>
@@ -525,6 +562,8 @@ export default function Tasks() {
                 key={task.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
                 className="card-hover border-warning/50"
               >
                 <h4 className="font-medium text-text-primary mb-2">{task.title}</h4>
@@ -554,6 +593,8 @@ export default function Tasks() {
                 key={task.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
                 className="card-hover border-success/50"
               >
                 <h4 className="font-medium text-text-primary mb-2">{task.title}</h4>
@@ -576,7 +617,7 @@ export default function Tasks() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                transition={{ delay: index * 0.1 }}
+                transition={{ delay: index * 0.1, duration: 0.25, ease: 'easeOut' }}
                 className="card-hover border-error/50"
               >
                 <h4 className="font-medium text-text-primary mb-2">{task.title}</h4>
@@ -585,11 +626,17 @@ export default function Tasks() {
             ))}
           </AnimatePresence>
         </div>
-      </div>
+      </motion.div>
 
       {isCreateOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="w-full max-w-xl card">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="w-full max-w-xl card"
+          >
             <h2 className="text-lg font-medium text-text-primary mb-4">新建任务</h2>
 
             <div className="space-y-4">
@@ -687,9 +734,9 @@ export default function Tasks() {
                 {isSubmitting ? '执行中...' : '创建并执行'}
               </button>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

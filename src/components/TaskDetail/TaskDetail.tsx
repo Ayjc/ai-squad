@@ -70,7 +70,13 @@ export default function TaskDetail({ task, onClose }: TaskDetailProps) {
   const selectedDisplay = displaySteps.find((s) => s.index === selectedStepIndex);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex justify-end" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 bg-black/60 flex justify-end"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="task-detail-title"
+    >
       <motion.div
         initial={{ x: '100%' }}
         animate={{ x: 0 }}
@@ -81,7 +87,7 @@ export default function TaskDetail({ task, onClose }: TaskDetailProps) {
       >
         <div className="sticky top-0 bg-bg-secondary border-b border-border-default p-4 flex items-start justify-between z-10">
           <div>
-            <h2 className="text-lg font-semibold text-text-primary">{task.title}</h2>
+            <h2 id="task-detail-title" className="text-lg font-semibold text-text-primary">{task.title}</h2>
             <div className="flex items-center gap-3 mt-1 text-sm text-text-secondary">
               <span className="px-2 py-0.5 rounded bg-accent/15 text-accent text-xs">
                 {TASK_MODE_INFO[task.mode].icon} {TASK_MODE_INFO[task.mode].label}
@@ -105,7 +111,11 @@ export default function TaskDetail({ task, onClose }: TaskDetailProps) {
               </span>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 text-text-secondary hover:text-text-primary">
+          <button
+            onClick={onClose}
+            className="p-1 text-text-secondary hover:text-text-primary"
+            aria-label="Close"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -135,6 +145,8 @@ export default function TaskDetail({ task, onClose }: TaskDetailProps) {
                     onClick={() =>
                       setSelectedStepIndex(selectedStepIndex === step.index ? null : step.index)
                     }
+                    aria-expanded={selectedStepIndex === step.index}
+                    aria-controls={`step-content-${step.index}`}
                     className={clsx(
                       'flex-1 text-left mb-2 p-2 rounded-lg transition-colors',
                       selectedStepIndex === step.index
@@ -160,6 +172,7 @@ export default function TaskDetail({ task, onClose }: TaskDetailProps) {
           <AnimatePresence>
             {selectedDisplay?.content && (
               <motion.div
+                id={`step-content-${selectedDisplay.index}`}
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}

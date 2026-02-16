@@ -6,6 +6,37 @@ import { getCollaborationStats } from '../services/tauriService';
 import type { CollaborationStat } from '../types/common';
 import { clsx } from 'clsx';
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.1
+    }
+  },
+  exit: {
+    opacity: 0,
+    y: -10,
+    transition: {
+      duration: 0.2,
+      ease: 'easeIn'
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.25,
+      ease: 'easeOut'
+    }
+  }
+};
+
 const formatDuration = (ms: number) => {
   if (ms <= 0) return '-';
   const seconds = Math.floor(ms / 1000);
@@ -38,13 +69,19 @@ export default function Settings() {
   }, []);
 
   return (
-    <div className="flex-1 overflow-auto p-6">
-      <div className="flex items-center justify-between mb-6">
+    <motion.div
+      className="flex-1 overflow-auto p-6"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+    >
+      <motion.div variants={itemVariants} className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold text-text-primary">设置</h1>
-      </div>
+      </motion.div>
 
       {/* Provider 配置 */}
-      <div className="card mb-6">
+      <motion.div variants={itemVariants} className="card mb-6">
         <h3 className="font-medium text-text-primary mb-4">AI Provider</h3>
         <div className="space-y-3">
           {agents.map((agent, index) => (
@@ -52,7 +89,7 @@ export default function Settings() {
               key={agent.id}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
+              transition={{ delay: index * 0.05, duration: 0.25, ease: 'easeOut' }}
               className="flex items-center gap-4 p-3 rounded-lg bg-bg-primary"
             >
               <span className="text-2xl">{agent.avatar}</span>
@@ -82,10 +119,10 @@ export default function Settings() {
             </motion.div>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       {/* 协作统计 */}
-      <div className="card mb-6">
+      <motion.div variants={itemVariants} className="card mb-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-medium text-text-primary">协作统计</h3>
           <button
@@ -136,17 +173,17 @@ export default function Settings() {
             </table>
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* 关于 */}
-      <div className="card">
+      <motion.div variants={itemVariants} className="card">
         <h3 className="font-medium text-text-primary mb-4">关于</h3>
         <div className="space-y-2 text-sm text-text-secondary">
           <p>AI Squad v2.0</p>
           <p>多 AI 协作任务管理平台</p>
           <p>基于 Tauri + React + TypeScript 构建</p>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

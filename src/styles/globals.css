@@ -44,24 +44,24 @@ body,
 @layer components {
   /* 卡片基础样式 */
   .card {
-    @apply bg-bg-secondary border border-border-default rounded-lg p-4;
+    @apply bg-bg-secondary border border-border rounded-xl p-6 transition-all duration-300 ease-out;
   }
 
   .card-hover {
-    @apply card transition-all duration-150 hover:border-accent/50 hover:shadow-lg hover:shadow-accent/5;
+    @apply card cursor-pointer hover:bg-bg-surface hover:border-border-focus hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5 active:scale-[0.99];
   }
 
   /* 按钮样式 */
   .btn {
-    @apply px-4 py-2 rounded-md font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 ease-out disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95;
   }
 
   .btn-primary {
-    @apply btn bg-accent text-bg-primary hover:bg-accent/90;
+    @apply btn bg-accent text-text-inverse hover:bg-accent-hover hover:shadow-sm hover:shadow-accent/10 border border-transparent;
   }
 
   .btn-secondary {
-    @apply btn bg-bg-secondary border border-border-default text-text-primary hover:bg-border-default;
+    @apply btn bg-bg-secondary border border-border text-text-primary hover:bg-bg-surface hover:border-border-focus;
   }
 
   .btn-ghost {
@@ -70,38 +70,38 @@ body,
 
   /* 状态指示器 */
   .status-dot {
-    @apply w-2 h-2 rounded-full;
+    @apply w-2.5 h-2.5 rounded-full;
   }
 
   .status-online {
-    @apply status-dot bg-success;
-    animation: breathe 2.5s ease-in-out infinite;
+    @apply status-dot bg-success shadow-[0_0_8px_rgba(76,175,112,0.5)];
+    animation: breathe 3s ease-in-out infinite;
   }
 
   .status-offline {
-    @apply status-dot bg-text-secondary;
+    @apply status-dot bg-text-tertiary;
   }
 
   .status-working {
-    @apply status-dot bg-warning;
-    animation: breathe 1.5s ease-in-out infinite;
+    @apply status-dot bg-accent shadow-[0_0_8px_rgba(91,159,216,0.5)];
+    animation: breathe 2s ease-in-out infinite;
   }
 
   /* AI 角色光晕效果 */
   .agent-glow-codex {
-    box-shadow: 0 0 20px rgba(16, 163, 127, 0.3);
+    box-shadow: 0 0 32px rgba(16, 163, 127, 0.15), inset 0 0 20px rgba(16, 163, 127, 0.05);
   }
 
   .agent-glow-claude {
-    box-shadow: 0 0 20px rgba(217, 119, 6, 0.3);
+    box-shadow: 0 0 32px rgba(217, 119, 6, 0.15), inset 0 0 20px rgba(217, 119, 6, 0.05);
   }
 
   .agent-glow-gemini {
-    box-shadow: 0 0 20px rgba(66, 133, 244, 0.3);
+    box-shadow: 0 0 32px rgba(66, 133, 244, 0.15), inset 0 0 20px rgba(66, 133, 244, 0.05);
   }
 
   .agent-glow-opencode {
-    box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+    box-shadow: 0 0 32px rgba(139, 92, 246, 0.15), inset 0 0 20px rgba(139, 92, 246, 0.05);
   }
 }
 
@@ -118,15 +118,14 @@ body,
 
 /* 键盘焦点样式 */
 :focus-visible {
-  outline: 2px solid #58A6FF;
-  outline-offset: 2px;
-  border-radius: 4px;
+  outline: none;
+  @apply ring-2 ring-accent ring-offset-2 ring-offset-bg-primary;
 }
 
 /* 动画 */
 @keyframes breathe {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(0.95); }
 }
 
 @keyframes shimmer {
@@ -142,11 +141,11 @@ body,
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 50%,
     transparent 100%
   );
   background-size: 200% 100%;
-  animation: shimmer 2s infinite;
+  animation: shimmer 2.5s infinite linear;
 }
 
 /* 进度条动画 */
@@ -154,11 +153,11 @@ body,
   background: linear-gradient(
     90deg,
     currentColor 0%,
-    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.4) 50%,
     currentColor 100%
   );
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  animation: shimmer 2s infinite linear;
 }
 
 /* Markdown prose overrides for dark theme */
@@ -171,12 +170,12 @@ body,
 }
 .prose pre {
   border: 1px solid var(--border-default);
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
 }
 .prose code {
-  font-size: 0.8em;
-  padding: 0.15em 0.3em;
-  border-radius: 0.25rem;
+  font-size: 0.85em;
+  padding: 0.2em 0.4em;
+  border-radius: 0.375rem;
   background: var(--bg-primary);
 }
 .prose code::before,
