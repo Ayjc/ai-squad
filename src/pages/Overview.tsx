@@ -51,16 +51,16 @@ export default function Overview() {
 
   return (
     <motion.div
-      className="flex-1 overflow-auto p-4 md:p-8"
+      className="page-shell"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
       exit="exit"
     >
-      <div className="max-w-7xl mx-auto">
+      <div className="page-container">
         {/* 头部 */}
-        <motion.div variants={itemVariants} className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-text-primary">概览</h1>
+        <motion.div variants={itemVariants} className="page-header">
+          <h1 className="page-title">概览</h1>
           <button className="btn-primary flex items-center gap-2 rounded-lg px-4 py-2 min-h-[44px]">
             <Plus className="w-4 h-4" />
             快速任务
@@ -169,4 +169,3 @@ export default function Overview() {
     </motion.div>
   );
 }
-

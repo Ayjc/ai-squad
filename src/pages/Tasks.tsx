@@ -498,135 +498,137 @@ export default function Tasks() {
 
   return (
     <motion.div
-      className="flex-1 overflow-auto p-6"
+      className="page-shell"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
       exit="exit"
     >
-      <motion.div variants={itemVariants} className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-text-primary">任务中心</h1>
-        <button
-          onClick={() => setIsCreateOpen(true)}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          新建任务
-        </button>
-      </motion.div>
+      <div className="page-container">
+        <motion.div variants={itemVariants} className="page-header">
+          <h1 className="page-title">任务中心</h1>
+          <button
+            onClick={() => setIsCreateOpen(true)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            新建任务
+          </button>
+        </motion.div>
 
-      <motion.div variants={itemVariants} className="card mb-6">
-        <div className="flex gap-4 mb-2">
-          {modes.map((mode) => {
-            const info = TASK_MODE_INFO[mode];
-            const isSelected = selectedMode === mode;
-            return (
-              <button
-                key={mode}
-                onClick={() => setSelectedMode(mode)}
-                className={clsx(
-                  'flex items-center gap-2 px-4 py-2 rounded-lg transition-colors',
-                  isSelected ? 'bg-accent/20 text-accent' : 'text-text-secondary hover:text-text-primary'
-                )}
-              >
-                <span>{info.icon}</span>
-                <span>{info.label}</span>
-              </button>
-            );
-          })}
-        </div>
-        <p className="text-sm text-text-secondary">
-          当前: {TASK_MODE_INFO[selectedMode].label} - {TASK_MODE_INFO[selectedMode].description}
-        </p>
-      </motion.div>
-
-      <motion.div variants={itemVariants} className="grid grid-cols-4 gap-4">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium text-text-primary">等待中 ({pendingTasks.length || 2})</h3>
+        <motion.div variants={itemVariants} className="card mb-6">
+          <div className="flex gap-4 mb-2">
+            {modes.map((mode) => {
+              const info = TASK_MODE_INFO[mode];
+              const isSelected = selectedMode === mode;
+              return (
+                <button
+                  key={mode}
+                  onClick={() => setSelectedMode(mode)}
+                  className={clsx(
+                    'flex items-center gap-2 px-4 py-2 rounded-lg transition-colors',
+                    isSelected ? 'bg-accent/20 text-accent' : 'text-text-secondary hover:text-text-primary'
+                  )}
+                >
+                  <span>{info.icon}</span>
+                  <span>{info.label}</span>
+                </button>
+              );
+            })}
           </div>
-          <AnimatePresence>
-            {(pendingTasks.length > 0 ? pendingTasks : demoTasks.filter(t => t.status === 'pending')).map((task, index) => (
-              renderTaskCard(task, index)
-            ))}
-          </AnimatePresence>
-        </div>
+          <p className="text-sm text-text-secondary">
+            当前: {TASK_MODE_INFO[selectedMode].label} - {TASK_MODE_INFO[selectedMode].description}
+          </p>
+        </motion.div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium text-text-primary">执行中 ({runningTasks.length || 1})</h3>
+        <motion.div variants={itemVariants} className="grid grid-cols-4 gap-4">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium text-text-primary">等待中 ({pendingTasks.length || 2})</h3>
+            </div>
+            <AnimatePresence>
+              {(pendingTasks.length > 0 ? pendingTasks : demoTasks.filter(t => t.status === 'pending')).map((task, index) => (
+                renderTaskCard(task, index)
+              ))}
+            </AnimatePresence>
           </div>
-          <AnimatePresence>
-            {(runningTasks.length > 0 ? runningTasks : demoTasks.filter(t => t.status === 'running')).map((task) => (
-              <motion.div
-                key={task.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
-                className="card-hover border-warning/50"
-              >
-                <h4 className="font-medium text-text-primary mb-2">{task.title}</h4>
-                <div className="h-1 bg-bg-primary rounded-full overflow-hidden mb-2">
-                  <motion.div
-                    className="h-full bg-warning"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${task.progress}%` }}
-                  />
-                </div>
-                <div className="flex items-center justify-between text-xs text-text-secondary">
-                  <span>{task.progress}%</span>
-                  <span>⚡ 执行中</span>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium text-text-primary">已完成 ({completedTasks.length || 2})</h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium text-text-primary">执行中 ({runningTasks.length || 1})</h3>
+            </div>
+            <AnimatePresence>
+              {(runningTasks.length > 0 ? runningTasks : demoTasks.filter(t => t.status === 'running')).map((task) => (
+                <motion.div
+                  key={task.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.25, ease: 'easeOut' }}
+                  className="card-hover border-warning/50"
+                >
+                  <h4 className="font-medium text-text-primary mb-2">{task.title}</h4>
+                  <div className="h-1 bg-bg-primary rounded-full overflow-hidden mb-2">
+                    <motion.div
+                      className="h-full bg-warning"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${task.progress}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-text-secondary">
+                    <span>{task.progress}%</span>
+                    <span>⚡ 执行中</span>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
-          <AnimatePresence>
-            {(completedTasks.length > 0 ? completedTasks : demoTasks.filter(t => t.status === 'completed')).map((task) => (
-              <motion.div
-                key={task.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
-                className="card-hover border-success/50"
-              >
-                <h4 className="font-medium text-text-primary mb-2">{task.title}</h4>
-                <div className="flex items-center gap-2 text-xs text-success">
-                  <span>✓ 完成</span>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium text-text-primary">失败 ({failedTasks.length})</h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium text-text-primary">已完成 ({completedTasks.length || 2})</h3>
+            </div>
+            <AnimatePresence>
+              {(completedTasks.length > 0 ? completedTasks : demoTasks.filter(t => t.status === 'completed')).map((task) => (
+                <motion.div
+                  key={task.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.25, ease: 'easeOut' }}
+                  className="card-hover border-success/50"
+                >
+                  <h4 className="font-medium text-text-primary mb-2">{task.title}</h4>
+                  <div className="flex items-center gap-2 text-xs text-success">
+                    <span>✓ 完成</span>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
-          <AnimatePresence>
-            {failedTasks.map((task, index) => (
-              <motion.div
-                key={task.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ delay: index * 0.1, duration: 0.25, ease: 'easeOut' }}
-                className="card-hover border-error/50"
-              >
-                <h4 className="font-medium text-text-primary mb-2">{task.title}</h4>
-                <p className="text-xs text-error">✗ 执行失败</p>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-      </motion.div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium text-text-primary">失败 ({failedTasks.length})</h3>
+            </div>
+            <AnimatePresence>
+              {failedTasks.map((task, index) => (
+                <motion.div
+                  key={task.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ delay: index * 0.1, duration: 0.25, ease: 'easeOut' }}
+                  className="card-hover border-error/50"
+                >
+                  <h4 className="font-medium text-text-primary mb-2">{task.title}</h4>
+                  <p className="text-xs text-error">✗ 执行失败</p>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+      </div>
 
       {isCreateOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">

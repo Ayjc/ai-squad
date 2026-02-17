@@ -313,207 +313,209 @@ export default function History() {
 
   return (
     <motion.div
-      className="flex-1 overflow-auto p-6"
+      className="page-shell"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
       exit="exit"
     >
-      <motion.div variants={itemVariants} className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-text-primary">历史记录</h1>
-        <button
-          type="button"
-          onClick={handleExportHistory}
-          className="btn-secondary flex items-center gap-2"
-        >
-          <Download className="w-4 h-4" />
-          导出
-        </button>
-      </motion.div>
-
-      <motion.div variants={itemVariants} className="card mb-6">
-        <div className="flex gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="搜索任务..."
-              className="w-full bg-bg-primary border border-border-default rounded-lg py-2 pl-10 pr-4 text-text-primary placeholder-text-secondary focus:outline-none focus:border-accent"
-            />
-          </div>
-          <select className="bg-bg-primary border border-border-default rounded-lg px-4 text-text-primary focus:outline-none focus:border-accent">
-            <option>全部</option>
-            <option>今天</option>
-            <option>本周</option>
-            <option>本月</option>
-          </select>
-        </div>
-      </motion.div>
-
-      <motion.div variants={itemVariants} className="grid grid-cols-4 gap-4 mb-6">
-        {[
-          { label: '总任务', value: stats.totalTasks, trend: '+12%', up: true },
-          { label: '完成率', value: `${stats.completionRate}%`, trend: '+5%', up: true },
-          { label: '平均耗时', value: stats.avgDuration, trend: '-30s', up: false },
-          { label: '最佳拍档', value: stats.bestPartner, subtext: `${stats.bestPartnerCount}次协作`, trend: stats.bestPartnerTrend === 'up' ? '+' : undefined, up: stats.bestPartnerTrend === 'up' },
-        ].map((stat) => (
-          <motion.div
-            key={stat.label}
-            variants={itemVariants}
-            className="card"
+      <div className="page-container">
+        <motion.div variants={itemVariants} className="page-header">
+          <h1 className="page-title">历史记录</h1>
+          <button
+            type="button"
+            onClick={handleExportHistory}
+            className="btn-secondary flex items-center gap-2"
           >
-            <p className="text-text-secondary text-sm mb-1">{stat.label}</p>
-            <p className="text-2xl font-semibold text-text-primary">{stat.value}</p>
-            {stat.trend && (
-              <p className={clsx(
-                'text-xs flex items-center gap-1 mt-1',
-                stat.up ? 'text-success' : 'text-error'
-              )}>
-                {stat.up ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                {stat.trend}
-              </p>
-            )}
-            {stat.subtext && (
-              <p className="text-xs text-text-secondary mt-1">{stat.subtext}</p>
-            )}
-          </motion.div>
-        ))}
-      </motion.div>
+            <Download className="w-4 h-4" />
+            导出
+          </button>
+        </motion.div>
 
-      <motion.div variants={itemVariants} className="card mb-6">
-        <h3 className="font-medium text-text-primary mb-4">今天</h3>
-        <div className="space-y-3">
-          {historyItems.map((item, index) => {
-            const expanded = expandedTaskId === item.id;
-            return (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05, duration: 0.25, ease: 'easeOut' }}
-                className="p-3 rounded-lg bg-bg-primary hover:bg-bg-primary/80 transition-colors cursor-pointer"
-                onClick={() => {
-                  if (!item.id.startsWith('demo-')) {
-                    setDetailTaskId(item.id);
-                  }
-                }}
-              >
-                <div className="flex items-center gap-4">
-                  <span className={clsx(
-                    'w-6 h-6 rounded-full flex items-center justify-center text-sm',
-                    item.success ? 'bg-success/20 text-success' : 'bg-error/20 text-error'
-                  )}>
-                    {item.success ? '✓' : '✗'}
-                  </span>
-                  <span className="text-text-secondary text-sm w-12">{item.time}</span>
-                  <span className="flex-1 text-text-primary">{item.title}</span>
-                  <span className="text-xs px-2 py-0.5 rounded bg-accent/15 text-accent">{item.mode}</span>
-                  <span className="text-text-secondary text-sm">{item.agent}</span>
-                  <span className="text-text-secondary text-sm">{item.duration}</span>
-                  {item.results.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setExpandedTaskId(expanded ? null : item.id);
-                      }}
-                      className="text-xs text-accent hover:underline"
+        <motion.div variants={itemVariants} className="card mb-6">
+          <div className="flex gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="搜索任务..."
+                className="w-full bg-bg-primary border border-border-default rounded-lg py-2 pl-10 pr-4 text-text-primary placeholder-text-secondary focus:outline-none focus:border-accent"
+              />
+            </div>
+            <select className="bg-bg-primary border border-border-default rounded-lg px-4 text-text-primary focus:outline-none focus:border-accent">
+              <option>全部</option>
+              <option>今天</option>
+              <option>本周</option>
+              <option>本月</option>
+            </select>
+          </div>
+        </motion.div>
+
+        <motion.div variants={itemVariants} className="grid grid-cols-4 gap-4 mb-6">
+          {[
+            { label: '总任务', value: stats.totalTasks, trend: '+12%', up: true },
+            { label: '完成率', value: `${stats.completionRate}%`, trend: '+5%', up: true },
+            { label: '平均耗时', value: stats.avgDuration, trend: '-30s', up: false },
+            { label: '最佳拍档', value: stats.bestPartner, subtext: `${stats.bestPartnerCount}次协作`, trend: stats.bestPartnerTrend === 'up' ? '+' : undefined, up: stats.bestPartnerTrend === 'up' },
+          ].map((stat) => (
+            <motion.div
+              key={stat.label}
+              variants={itemVariants}
+              className="card"
+            >
+              <p className="text-text-secondary text-sm mb-1">{stat.label}</p>
+              <p className="text-2xl font-semibold text-text-primary">{stat.value}</p>
+              {stat.trend && (
+                <p className={clsx(
+                  'text-xs flex items-center gap-1 mt-1',
+                  stat.up ? 'text-success' : 'text-error'
+                )}>
+                  {stat.up ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                  {stat.trend}
+                </p>
+              )}
+              {stat.subtext && (
+                <p className="text-xs text-text-secondary mt-1">{stat.subtext}</p>
+              )}
+            </motion.div>
+          ))}
+        </motion.div>
+
+        <motion.div variants={itemVariants} className="card mb-6">
+          <h3 className="font-medium text-text-primary mb-4">今天</h3>
+          <div className="space-y-3">
+            {historyItems.map((item, index) => {
+              const expanded = expandedTaskId === item.id;
+              return (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05, duration: 0.25, ease: 'easeOut' }}
+                  className="p-3 rounded-lg bg-bg-primary hover:bg-bg-primary/80 transition-colors cursor-pointer"
+                  onClick={() => {
+                    if (!item.id.startsWith('demo-')) {
+                      setDetailTaskId(item.id);
+                    }
+                  }}
+                >
+                  <div className="flex items-center gap-4">
+                    <span className={clsx(
+                      'w-6 h-6 rounded-full flex items-center justify-center text-sm',
+                      item.success ? 'bg-success/20 text-success' : 'bg-error/20 text-error'
+                    )}>
+                      {item.success ? '✓' : '✗'}
+                    </span>
+                    <span className="text-text-secondary text-sm w-12">{item.time}</span>
+                    <span className="flex-1 text-text-primary">{item.title}</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-accent/15 text-accent">{item.mode}</span>
+                    <span className="text-text-secondary text-sm">{item.agent}</span>
+                    <span className="text-text-secondary text-sm">{item.duration}</span>
+                    {item.results.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedTaskId(expanded ? null : item.id);
+                        }}
+                        className="text-xs text-accent hover:underline"
+                      >
+                        {expanded ? '收起结果' : `查看结果(${item.results.length})`}
+                      </button>
+                    )}
+                  </div>
+
+                  {expanded && item.results.length > 0 && (
+                    <div
+                      className="mt-3 pt-3 border-t border-border-default space-y-2"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      {expanded ? '收起结果' : `查看结果(${item.results.length})`}
-                    </button>
-                  )}
-                </div>
-
-                {expanded && item.results.length > 0 && (
-                  <div
-                    className="mt-3 pt-3 border-t border-border-default space-y-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {item.results.map((result, resultIndex) => {
-                      const resultKey = `${item.id}-${result.agentId}-${resultIndex}`;
-                      const copied = copiedResultKey === resultKey;
-                      return (
-                        <div
-                          key={resultKey}
-                          className="rounded-lg border border-border-default bg-bg-secondary/60 p-2"
-                        >
-                          <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-text-primary font-medium">{result.agentId}</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-text-secondary">耗时 {result.duration}</span>
-                              <button
-                                type="button"
-                                onClick={() => handleCopyResult(resultKey, result.content || '')}
-                                className="inline-flex items-center justify-center rounded border border-border-default p-1 text-text-secondary hover:text-text-primary hover:bg-bg-primary transition-colors"
-                                title="复制 Markdown"
-                                aria-label="复制 Markdown"
-                              >
-                                {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
-                              </button>
+                      {item.results.map((result, resultIndex) => {
+                        const resultKey = `${item.id}-${result.agentId}-${resultIndex}`;
+                        const copied = copiedResultKey === resultKey;
+                        return (
+                          <div
+                            key={resultKey}
+                            className="rounded-lg border border-border-default bg-bg-secondary/60 p-2"
+                          >
+                            <div className="flex items-center justify-between text-xs mb-1">
+                              <span className="text-text-primary font-medium">{result.agentId}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-text-secondary">耗时 {result.duration}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyResult(resultKey, result.content || '')}
+                                  className="inline-flex items-center justify-center rounded border border-border-default p-1 text-text-secondary hover:text-text-primary hover:bg-bg-primary transition-colors"
+                                  title="复制 Markdown"
+                                  aria-label="复制 Markdown"
+                                >
+                                  {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                          {result.error && (
-                            <p className="text-xs text-error mb-1">{result.error}</p>
-                          )}
-                          <MarkdownRenderer
-                            content={result.content || '-'}
-                            className={clsx(
-                              'text-xs max-h-28 overflow-y-auto',
-                              !result.success && '[&_*]:text-error/90'
+                            {result.error && (
+                              <p className="text-xs text-error mb-1">{result.error}</p>
                             )}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </motion.div>
-            );
-          })}
-        </div>
-      </motion.div>
-
-      <motion.div variants={itemVariants} className="card">
-        <h3 className="font-medium text-text-primary mb-4">协作里程碑</h3>
-        <div className="grid grid-cols-5 gap-3">
-          {MILESTONES.map((milestone) => {
-            const progressData = milestoneProgress.find((m) => m.id === milestone.id);
-            const isUnlocked = progressData?.unlocked ?? false;
-            const progress = isUnlocked ? 100 : Math.min(100, Math.round(((progressData?.progress ?? 0) / milestone.requirement) * 100));
-            return (
-              <motion.div
-                key={milestone.id}
-                variants={itemVariants}
-                className={clsx(
-                  'rounded-lg p-3 flex flex-col items-center text-center',
-                  isUnlocked ? 'bg-bg-primary' : 'bg-bg-primary/50'
-                )}
-              >
-                <span className="text-2xl mb-1">{isUnlocked ? milestone.icon : '🔒'}</span>
-                <span className="text-xs font-medium text-text-primary">
-                  {isUnlocked ? milestone.name : '???'}
-                </span>
-                {isUnlocked && (
-                  <span className="text-xs text-success mt-0.5">已达成</span>
-                )}
-                {!isUnlocked && (
-                  <div className="w-full mt-1.5">
-                    <div className="h-1 bg-border-default rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-accent rounded-full transition-all"
-                        style={{ width: progress + '%' }}
-                      />
+                            <MarkdownRenderer
+                              content={result.content || '-'}
+                              className={clsx(
+                                'text-xs max-h-28 overflow-y-auto',
+                                !result.success && '[&_*]:text-error/90'
+                              )}
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
-                    <span className="text-xs text-text-secondary mt-0.5">{progress}%</span>
-                  </div>
-                )}
-              </motion.div>
-            );
-          })}
-        </div>
-      </motion.div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+        </motion.div>
+
+        <motion.div variants={itemVariants} className="card">
+          <h3 className="font-medium text-text-primary mb-4">协作里程碑</h3>
+          <div className="grid grid-cols-5 gap-3">
+            {MILESTONES.map((milestone) => {
+              const progressData = milestoneProgress.find((m) => m.id === milestone.id);
+              const isUnlocked = progressData?.unlocked ?? false;
+              const progress = isUnlocked ? 100 : Math.min(100, Math.round(((progressData?.progress ?? 0) / milestone.requirement) * 100));
+              return (
+                <motion.div
+                  key={milestone.id}
+                  variants={itemVariants}
+                  className={clsx(
+                    'rounded-lg p-3 flex flex-col items-center text-center',
+                    isUnlocked ? 'bg-bg-primary' : 'bg-bg-primary/50'
+                  )}
+                >
+                  <span className="text-2xl mb-1">{isUnlocked ? milestone.icon : '🔒'}</span>
+                  <span className="text-xs font-medium text-text-primary">
+                    {isUnlocked ? milestone.name : '???'}
+                  </span>
+                  {isUnlocked && (
+                    <span className="text-xs text-success mt-0.5">已达成</span>
+                  )}
+                  {!isUnlocked && (
+                    <div className="w-full mt-1.5">
+                      <div className="h-1 bg-border-default rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-accent rounded-full transition-all"
+                          style={{ width: progress + '%' }}
+                        />
+                      </div>
+                      <span className="text-xs text-text-secondary mt-0.5">{progress}%</span>
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+        </motion.div>
+      </div>
 
       <AnimatePresence>
         {detailTask && (

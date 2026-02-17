@@ -7,43 +7,42 @@ export default {
   theme: {
     extend: {
       colors: {
-        // 主色调
-        'bg-primary': '#0A0A0B',        // 更深的基础黑
-        'bg-secondary': '#1A1B1E',      // 卡片/次级背景
-        'bg-surface': '#24262B',        // 悬浮层/输入框
-        'bg-surface-card': '#1A1B1E',   // alias for compatibility
-        'bg-surface-hover': '#24262B',  // 悬停背景
-        'bg-elevated': '#2D2F35',       // 最亮的表面层
+        // Warm Minimal Light theme
+        'bg-primary': '#F7F4EF',
+        'bg-secondary': '#EFE9E1',
+        'bg-surface': '#FFFFFF',
+        'bg-surface-card': '#FFFFFF',
+        'bg-surface-hover': '#F5EFE7',
+        'bg-elevated': '#FFFFFF',
 
-        'border': '#2D3139',            // 统一边框
-        'border-default': '#2D3139',    // alias for compatibility
-        'border-subtle': '#1E2027',     // 微妙分割线
-        'border-focus': '#3D4451',      // 焦点/悬停状态
+        'border': '#D8CEC3',
+        'border-default': '#D8CEC3',
+        'border-subtle': '#E6DED4',
+        'border-focus': '#B9AB9B',
 
-        'text-primary': '#E8EAED',      // 主文本
-        'text-secondary': '#9195A0',    // 次级文本
-        'text-tertiary': '#6B6F7B',     // 禁用/提示文本
-        'text-inverse': '#0A0A0B',      // 反色文本
+        'text-primary': '#2C2A27',
+        'text-secondary': '#5E5952',
+        'text-tertiary': '#7A736A',
+        'text-inverse': '#F7F4EF',
 
-        // 功能色
-        'accent': '#5B9FD8',            // 蓝色主题色
-        'accent-hover': '#6AAAE3',      // 悬停状态
-        'accent-muted': 'rgba(91, 159, 216, 0.12)',
+        'accent': '#2E7A76',
+        'accent-hover': '#276B68',
+        'accent-muted': 'rgba(46, 122, 118, 0.12)',
 
-        'success': '#4CAF70',           // 绿色
-        'success-muted': 'rgba(76, 175, 112, 0.12)',
+        'success': '#3B8E5F',
+        'success-muted': 'rgba(59, 142, 95, 0.12)',
 
-        'warning': '#C89A3F',           // 琥珀色
-        'warning-muted': 'rgba(200, 154, 63, 0.12)',
+        'warning': '#B7853B',
+        'warning-muted': 'rgba(183, 133, 59, 0.12)',
 
-        'error': '#E85D5D',             // 红色
-        'error-muted': 'rgba(232, 93, 93, 0.12)',
+        'error': '#BF5B53',
+        'error-muted': 'rgba(191, 91, 83, 0.12)',
 
         // AI 角色专属色
-        'codex': '#3D9B7A',             // OpenAI 绿
-        'claude': '#C17A33',            // Anthropic 橙
-        'gemini': '#5F8FC9',            // Google 蓝
-        'opencode': '#8571C4',          // 紫色
+        'codex': '#3F8B70',
+        'claude': '#B67A3A',
+        'gemini': '#4E7FAB',
+        'opencode': '#7563B0',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
@@ -60,12 +59,12 @@ export default {
         'btn': '8px',
       },
       boxShadow: {
-        'sm': '0 1px 2px 0 rgba(0, 0, 0, 0.3)',
-        'DEFAULT': '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2)',
-        'md': '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2)',
-        'lg': '0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2)',
-        'xl': '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2)',
-        'glow': '0 0 15px rgba(88, 166, 255, 0.5)',
+        'sm': '0 1px 2px 0 rgba(44, 42, 39, 0.08)',
+        'DEFAULT': '0 10px 24px -18px rgba(44, 42, 39, 0.24), 0 2px 8px rgba(44, 42, 39, 0.08)',
+        'md': '0 10px 24px -18px rgba(44, 42, 39, 0.24), 0 2px 8px rgba(44, 42, 39, 0.08)',
+        'lg': '0 16px 36px -24px rgba(44, 42, 39, 0.28), 0 6px 14px rgba(44, 42, 39, 0.12)',
+        'xl': '0 24px 48px -30px rgba(44, 42, 39, 0.3), 0 8px 18px rgba(44, 42, 39, 0.14)',
+        'glow': '0 0 18px rgba(46, 122, 118, 0.28)',
       },
       transitionTimingFunction: {
         'ease-out-expo': 'cubic-bezier(0.19, 1, 0.22, 1)',

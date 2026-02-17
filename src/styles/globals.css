@@ -9,6 +9,17 @@
   box-sizing: border-box;
 }
 
+:root {
+  --bg-primary: #f7f4ef;
+  --bg-secondary: #efe9e1;
+  --bg-surface: #ffffff;
+  --border-default: #d8cec3;
+  --text-primary: #2c2a27;
+  --text-secondary: #5e5952;
+  --text-tertiary: #7a736a;
+  --accent: #2e7a76;
+}
+
 html,
 body,
 #root {
@@ -16,23 +27,32 @@ body,
   overflow: hidden;
 }
 
+body {
+  background:
+    radial-gradient(1200px 520px at 86% -12%, rgba(46, 122, 118, 0.12), transparent 58%),
+    radial-gradient(980px 420px at 0% 100%, rgba(184, 160, 130, 0.12), transparent 62%),
+    var(--bg-primary);
+  color: var(--text-primary);
+}
+
 /* 滚动条样式 */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #161B22;
+  background: #ece5db;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #30363D;
-  border-radius: 4px;
+  background: #cab9a8;
+  border-radius: 999px;
+  border: 2px solid #ece5db;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #484F58;
+  background: #b8a48f;
 }
 
 /* Tabular 数字 */
@@ -42,13 +62,35 @@ body,
 
 /* 自定义组件样式 */
 @layer components {
+  .page-shell {
+    @apply flex-1 overflow-auto p-4 md:p-8;
+  }
+
+  .page-container {
+    @apply max-w-7xl mx-auto;
+  }
+
+  .page-header {
+    @apply flex flex-wrap items-center justify-between gap-3 mb-8;
+  }
+
+  .page-title {
+    @apply text-[28px] md:text-3xl font-bold tracking-tight leading-tight text-text-primary;
+  }
+
+  .page-actions {
+    @apply flex items-center gap-3;
+  }
+
   /* 卡片基础样式 */
   .card {
-    @apply bg-bg-secondary border border-border rounded-xl p-6 transition-all duration-300 ease-out;
+    @apply bg-bg-surface border border-border-subtle rounded-xl p-6 transition-all duration-300 ease-out;
+    box-shadow: 0 12px 26px -22px rgba(44, 42, 39, 0.24), 0 2px 8px rgba(44, 42, 39, 0.08);
   }
 
   .card-hover {
-    @apply card cursor-pointer hover:bg-bg-surface hover:border-border-focus hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5 active:scale-[0.99];
+    @apply card cursor-pointer hover:bg-bg-secondary hover:border-border-focus hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.99];
+    box-shadow: 0 14px 28px -22px rgba(44, 42, 39, 0.26), 0 3px 10px rgba(44, 42, 39, 0.1);
   }
 
   /* 按钮样式 */
@@ -57,15 +99,16 @@ body,
   }
 
   .btn-primary {
-    @apply btn bg-accent text-text-inverse hover:bg-accent-hover hover:shadow-sm hover:shadow-accent/10 border border-transparent;
+    @apply btn bg-accent text-text-inverse hover:bg-accent-hover border border-transparent;
+    box-shadow: 0 8px 18px -10px rgba(46, 122, 118, 0.45);
   }
 
   .btn-secondary {
-    @apply btn bg-bg-secondary border border-border text-text-primary hover:bg-bg-surface hover:border-border-focus;
+    @apply btn bg-bg-surface border border-border-default text-text-primary hover:bg-bg-secondary hover:border-border-focus;
   }
 
   .btn-ghost {
-    @apply btn bg-transparent text-text-secondary hover:text-text-primary hover:bg-bg-secondary;
+    @apply btn bg-transparent text-text-secondary hover:text-text-primary hover:bg-bg-secondary/75;
   }
 
   /* 状态指示器 */
@@ -74,7 +117,7 @@ body,
   }
 
   .status-online {
-    @apply status-dot bg-success shadow-[0_0_8px_rgba(76,175,112,0.5)];
+    @apply status-dot bg-success shadow-[0_0_8px_rgba(59,142,95,0.4)];
     animation: breathe 3s ease-in-out infinite;
   }
 
@@ -83,25 +126,25 @@ body,
   }
 
   .status-working {
-    @apply status-dot bg-accent shadow-[0_0_8px_rgba(91,159,216,0.5)];
+    @apply status-dot bg-accent shadow-[0_0_8px_rgba(46,122,118,0.42)];
     animation: breathe 2s ease-in-out infinite;
   }
 
   /* AI 角色光晕效果 */
   .agent-glow-codex {
-    box-shadow: 0 0 32px rgba(16, 163, 127, 0.15), inset 0 0 20px rgba(16, 163, 127, 0.05);
+    box-shadow: 0 0 20px rgba(63, 139, 112, 0.15), inset 0 0 16px rgba(63, 139, 112, 0.04);
   }
 
   .agent-glow-claude {
-    box-shadow: 0 0 32px rgba(217, 119, 6, 0.15), inset 0 0 20px rgba(217, 119, 6, 0.05);
+    box-shadow: 0 0 20px rgba(182, 122, 58, 0.15), inset 0 0 16px rgba(182, 122, 58, 0.04);
   }
 
   .agent-glow-gemini {
-    box-shadow: 0 0 32px rgba(66, 133, 244, 0.15), inset 0 0 20px rgba(66, 133, 244, 0.05);
+    box-shadow: 0 0 20px rgba(78, 127, 171, 0.15), inset 0 0 16px rgba(78, 127, 171, 0.04);
   }
 
   .agent-glow-opencode {
-    box-shadow: 0 0 32px rgba(139, 92, 246, 0.15), inset 0 0 20px rgba(139, 92, 246, 0.05);
+    box-shadow: 0 0 20px rgba(117, 99, 176, 0.15), inset 0 0 16px rgba(117, 99, 176, 0.04);
   }
 }
 
@@ -120,6 +163,7 @@ body,
 :focus-visible {
   outline: none;
   @apply ring-2 ring-accent ring-offset-2 ring-offset-bg-primary;
+  box-shadow: 0 0 0 3px rgba(46, 122, 118, 0.16);
 }
 
 /* 动画 */
@@ -141,7 +185,7 @@ body,
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.05) 50%,
+    rgba(44, 42, 39, 0.08) 50%,
     transparent 100%
   );
   background-size: 200% 100%;
@@ -153,14 +197,14 @@ body,
   background: linear-gradient(
     90deg,
     currentColor 0%,
-    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0.72) 50%,
     currentColor 100%
   );
   background-size: 200% 100%;
   animation: shimmer 2s infinite linear;
 }
 
-/* Markdown prose overrides for dark theme */
+/* Markdown prose overrides for warm theme */
 .prose {
   --tw-prose-body: var(--text-secondary);
   --tw-prose-headings: var(--text-primary);
