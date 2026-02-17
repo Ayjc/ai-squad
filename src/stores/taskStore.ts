@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Task, TaskStatus, TaskStep } from '../types/task';
+import { AGENT_CONFIGS } from '../types/agent';
 
 interface TaskState {
   tasks: Task[];
@@ -22,6 +23,20 @@ interface TaskState {
 
 // 生成唯一 ID
 const generateId = () => `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+const SUPPORTED_AGENT_IDS = new Set(Object.keys(AGENT_CONFIGS));
+
+const isSupportedAgent = (agentId: string) => SUPPORTED_AGENT_IDS.has(agentId);
+
+const sanitizeTask = (task: Task): Task => {
+  return {
+    ...task,
+    assignees: task.assignees.filter(isSupportedAgent),
+    results: task.results.filter((result) => isSupportedAgent(result.agentId)),
+    steps: task.steps.filter((step) => isSupportedAgent(step.agentId)),
+  };
+};
+
+const sanitizeTasks = (tasks: Task[]) => tasks.map(sanitizeTask);
 
 export const useTaskStore = create<TaskState>()(
   persist(
@@ -29,13 +44,14 @@ export const useTaskStore = create<TaskState>()(
       tasks: [],
 
       setTasks: (tasks) => {
-        set({ tasks });
+        set({ tasks: sanitizeTasks(tasks) });
       },
 
       addTask: (taskData) => {
         const id = generateId();
         const task: Task = {
           ...taskData,
+          assignees: taskData.assignees.filter(isSupportedAgent),
           id,
           createdAt: new Date(),
           progress: 0,
@@ -70,6 +86,7 @@ export const useTaskStore = create<TaskState>()(
       },
 
       addTaskResult: (id, result) => {
+        if (!isSupportedAgent(result.agentId)) return;
         set((state) => ({
           tasks: state.tasks.map((task) =>
             task.id === id
@@ -80,6 +97,7 @@ export const useTaskStore = create<TaskState>()(
       },
 
       addTaskStep: (taskId, stepData) => {
+        if (!isSupportedAgent(stepData.agentId)) return;
         set((state) => ({
           tasks: state.tasks.map((task) => {
             if (task.id !== taskId) return task;
@@ -166,6 +184,10 @@ export const useTaskStore = create<TaskState>()(
     }),
     {
       name: 'ai-squad-tasks',
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        state.setTasks(state.tasks);
+      },
     }
   )
 );

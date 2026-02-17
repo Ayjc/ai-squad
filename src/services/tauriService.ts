@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { StepStatus, Task, TaskMode, TaskResult, TaskStatus, TaskStep } from '../types/task';
 import type { CollaborationStat } from '../types/common';
+import { AGENT_CONFIGS } from '../types/agent';
 
 export interface ProviderRuntimeStatus {
   id: string;
@@ -65,6 +66,11 @@ const toIsoString = (value?: Date | string): string | null => {
 const TASK_STATUSES: TaskStatus[] = ['pending', 'running', 'completed', 'failed', 'cancelled'];
 const TASK_MODES: TaskMode[] = ['parallel', 'pipeline', 'master'];
 const STEP_STATUSES: StepStatus[] = ['pending', 'running', 'completed', 'failed'];
+const SUPPORTED_AGENT_IDS = new Set(Object.keys(AGENT_CONFIGS));
+
+const isSupportedAgent = (agentId: string): boolean => {
+  return SUPPORTED_AGENT_IDS.has(agentId);
+};
 
 const normalizeStatus = (status: string): TaskStatus => {
   return TASK_STATUSES.includes(status as TaskStatus) ? (status as TaskStatus) : 'pending';
@@ -84,7 +90,9 @@ const parseAssignees = (value: string): string[] => {
   try {
     const parsed = JSON.parse(value);
     if (Array.isArray(parsed)) {
-      return parsed.map((item) => String(item));
+      return parsed
+        .map((item) => String(item))
+        .filter((item) => item.length > 0 && isSupportedAgent(item));
     }
   } catch {
     // ignore invalid JSON and fallback to comma split
@@ -93,7 +101,7 @@ const parseAssignees = (value: string): string[] => {
   return value
     .split(',')
     .map((item) => item.trim())
-    .filter(Boolean);
+    .filter((item) => item.length > 0 && isSupportedAgent(item));
 };
 
 const parseDate = (value: string | null): Date | undefined => {
@@ -216,6 +224,9 @@ export async function getTasks(): Promise<Task[] | null> {
 
     const groupedResults = new Map<string, TaskResult[]>();
     resultRecords.forEach((record) => {
+      if (!isSupportedAgent(record.agent_id)) {
+        return;
+      }
       const item = mapTaskResultRecord(record);
       const current = groupedResults.get(record.task_id) ?? [];
       groupedResults.set(record.task_id, [...current, item]);
@@ -232,7 +243,9 @@ export async function getTasks(): Promise<Task[] | null> {
     await Promise.allSettled(
       tasks.map(async (task) => {
         const stepRecords = await invoke<TaskStepRecord[]>('get_task_steps', { taskId: task.id });
-        task.steps = stepRecords.map(mapTaskStepRecord);
+        task.steps = stepRecords
+          .filter((record) => isSupportedAgent(record.agent_id))
+          .map(mapTaskStepRecord);
       })
     );
 

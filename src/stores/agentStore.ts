@@ -8,6 +8,7 @@ import { useTaskStore } from './taskStore';
 interface AgentState {
   agents: Agent[];
   initializeAgents: () => void;
+  reconcileAgents: () => void;
   updateAgentStatus: (id: string, status: AgentStatus) => void;
   syncProviderStatuses: (providers: ProviderRuntimeStatus[]) => void;
   incrementTasksCompleted: (id: string) => void;
@@ -28,21 +29,50 @@ const calculateSynergy = (tasksCompleted: number, tasksFailed: number = 0): numb
   return Math.round(frequencyScore * 0.3 + successScore * 0.4 + frequencyScore * 0.3);
 };
 
+const createDefaultAgent = (config: Omit<Agent, 'status' | 'level' | 'experience' | 'tasksCompleted' | 'tasksFailed' | 'currentTask'>): Agent => ({
+  ...config,
+  status: 'offline',
+  level: 0,
+  experience: 0,
+  tasksCompleted: 0,
+  tasksFailed: 0,
+});
+
+const normalizeAgents = (currentAgents: Agent[]): Agent[] => {
+  const agentMap = new Map(currentAgents.map((agent) => [agent.id, agent]));
+
+  return Object.values(AGENT_CONFIGS).map((config) => {
+    const current = agentMap.get(config.id);
+    if (!current) {
+      return createDefaultAgent(config);
+    }
+
+    return {
+      ...createDefaultAgent(config),
+      status: current.status,
+      level: current.level,
+      experience: current.experience,
+      tasksCompleted: current.tasksCompleted,
+      tasksFailed: current.tasksFailed ?? 0,
+      currentTask: current.currentTask,
+    };
+  });
+};
+
 export const useAgentStore = create<AgentState>()(
   persist(
     (set, get) => ({
       agents: [],
 
       initializeAgents: () => {
-        const agents: Agent[] = Object.values(AGENT_CONFIGS).map((config) => ({
-          ...config,
-          status: 'offline' as AgentStatus,
-          level: 0,
-          experience: 0,
-          tasksCompleted: 0,
-          tasksFailed: 0,
-        }));
+        const agents: Agent[] = Object.values(AGENT_CONFIGS).map((config) => createDefaultAgent(config));
         set({ agents });
+      },
+
+      reconcileAgents: () => {
+        set((state) => ({
+          agents: normalizeAgents(state.agents),
+        }));
       },
 
       updateAgentStatus: (id, status) => {
@@ -173,6 +203,9 @@ export const useAgentStore = create<AgentState>()(
     }),
     {
       name: 'ai-squad-agents',
+      onRehydrateStorage: () => (state) => {
+        state?.reconcileAgents();
+      },
     }
   )
 );
