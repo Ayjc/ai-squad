@@ -83,6 +83,7 @@ const buildMasterFinalizeMessage = (
 export default function Tasks() {
   const location = useLocation();
   const locationState = location.state as { preselectedAgent?: string } | null;
+  const preselectedAgent = locationState?.preselectedAgent;
   const {
     tasks,
     addTask,
@@ -103,12 +104,12 @@ export default function Tasks() {
   const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
-    if (locationState?.preselectedAgent) {
-      setSelectedAssignees([locationState.preselectedAgent]);
+    if (preselectedAgent) {
+      setSelectedAssignees([preselectedAgent]);
       setIsCreateOpen(true);
       window.history.replaceState({}, document.title);
     }
-  }, []);
+  }, [preselectedAgent]);
 
   const assigneeOptions = useMemo(() => {
     return getRecommendedAgents().map((agent) => ({

@@ -140,19 +140,21 @@ const formatExportDate = (date: Date) => {
 export default function History() {
   const location = useLocation();
   const locationState = location.state as { filterAgent?: string } | null;
+  const filterAgent = locationState?.filterAgent;
   const { getMilestoneProgress } = useAgentStore();
   const { tasks } = useTaskStore();
   const milestoneProgress = getMilestoneProgress();
-  const [searchQuery, setSearchQuery] = useState(locationState?.filterAgent ?? '');
+  const [searchQuery, setSearchQuery] = useState(filterAgent ?? '');
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [copiedResultKey, setCopiedResultKey] = useState<string | null>(null);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (locationState?.filterAgent) {
+    if (filterAgent) {
+      setSearchQuery(filterAgent);
       window.history.replaceState({}, document.title);
     }
-  }, []);
+  }, [filterAgent]);
 
   const handleCopyResult = async (resultKey: string, content: string) => {
     try {
