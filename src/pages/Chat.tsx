@@ -267,10 +267,18 @@ export default function Chat() {
         const has = await hasApiKey('claude');
         if (has) {
           try {
+            const history = messages
+              .filter((m) => m.role === 'user' || m.role === 'assistant')
+              .slice(-12)
+              .map((m) => ({
+                role: (m.role === 'assistant' ? 'assistant' : 'user') as 'assistant' | 'user',
+                content: m.content,
+              }));
+
             const res = await providerChat({
               provider_id: 'claude',
               model: claudeModel,
-              messages: [{ role: 'user', content: text }],
+              messages: [...history, { role: 'user', content: text }],
               max_tokens: 1024,
             });
             output = res.content;
@@ -436,10 +444,18 @@ export default function Chat() {
       const has = await hasApiKey('claude');
       if (has) {
         try {
+          const history = messages
+            .filter((m) => m.role === 'user' || m.role === 'assistant')
+            .slice(-12)
+            .map((m) => ({
+              role: (m.role === 'assistant' ? 'assistant' : 'user') as 'assistant' | 'user',
+              content: m.content,
+            }));
+
           const res = await providerChat({
             provider_id: 'claude',
             model: claudeModel,
-            messages: [{ role: 'user', content: aggInput }],
+            messages: [...history, { role: 'user', content: aggInput }],
             max_tokens: 1024,
           });
           aggOut = res.content;
