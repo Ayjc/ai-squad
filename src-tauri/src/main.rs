@@ -2,9 +2,13 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod ccb;
+mod config;
 mod db;
-mod project;
+mod keys;
+mod keys_cmd;
 mod paths;
+mod project;
+mod secure;
 
 fn main() {
     tauri::Builder::default()
@@ -18,6 +22,12 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            // config + keys
+            config::get_config,
+            config::save_config_cmd,
+            keys_cmd::set_api_key,
+            keys_cmd::has_api_key,
+            keys_cmd::reveal_api_key,
             // project commands
             project::get_project_info,
             project::start_ccb,
