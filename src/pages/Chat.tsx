@@ -14,6 +14,7 @@ type ChatMessage = {
   providerId?: string;
   content: string;
   createdAt: Date;
+  kind?: 'normal' | 'summary';
 };
 
 type StepStatus = 'pending' | 'running' | 'completed' | 'failed';
@@ -72,6 +73,7 @@ export default function Chat() {
   const [aggregator, setAggregator] = useState<string>('claude');
   const [input, setInput] = useState('');
   const [activeRun, setActiveRun] = useState<ChatRun | null>(null);
+  const [showProviderReplies, setShowProviderReplies] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
       id: makeId(),
@@ -172,6 +174,7 @@ export default function Chat() {
       providerId: r.pid,
       content: r.content,
       createdAt: new Date(),
+      kind: 'normal',
     }));
 
     const aggInput = [
@@ -218,7 +221,8 @@ export default function Chat() {
       id: makeId(),
       role: 'assistant',
       providerId: aggregator,
-      content: (aggOut?.trim() || '(aggregator) failed / empty output.') + `\n\n(duration: ${aggDurationMs}ms)` ,
+      kind: 'summary',
+      content: (aggOut?.trim() || '(aggregator) failed / empty output.') + `\n\n(duration: ${aggDurationMs}ms)`,
       createdAt: new Date(),
     };
 
@@ -289,29 +293,55 @@ export default function Chat() {
 
         <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 h-[calc(100vh-320px)]">
           <div className="card rounded-xl overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-auto p-4 space-y-3">
-            {messages.map((msg) => {
-              const isUser = msg.role === 'user';
-              const bubbleClass = isUser
-                ? 'bg-accent text-white ml-auto'
-                : msg.role === 'system'
-                  ? 'bg-bg-secondary/60 text-text-secondary'
-                  : 'bg-bg-surface text-text-primary';
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border-subtle bg-bg-surface">
+              <div className="text-sm font-semibold text-text-primary">Messages</div>
+              <button
+                onClick={() => setShowProviderReplies((v) => !v)}
+                className="text-xs px-3 py-1.5 rounded-lg border border-border-subtle text-text-secondary hover:text-text-primary hover:border-border-default transition-colors"
+                title="Toggle provider replies"
+              >
+                {showProviderReplies ? 'Hide provider replies' : 'Show provider replies'}
+              </button>
+            </div>
 
-              return (
-                <div key={msg.id} className={clsx('max-w-[900px] w-fit', isUser ? 'ml-auto' : 'mr-auto')}>
-                  {msg.role === 'assistant' && msg.providerId && (
-                    <div className="text-xs text-text-tertiary mb-1">
-                      {AGENT_CONFIGS[msg.providerId]?.avatar} {AGENT_CONFIGS[msg.providerId]?.name}
+            <div className="flex-1 overflow-auto p-4 space-y-3">
+              {messages
+                .filter((m) => showProviderReplies || m.kind === 'summary' || m.role === 'user' || m.role === 'system')
+                .map((msg) => {
+                  const isUser = msg.role === 'user';
+                  const isSummary = msg.kind === 'summary';
+
+                  const bubbleClass = isUser
+                    ? 'bg-accent text-white ml-auto'
+                    : msg.role === 'system'
+                      ? 'bg-bg-secondary/60 text-text-secondary'
+                      : isSummary
+                        ? 'bg-gradient-to-br from-accent/18 to-bg-surface text-text-primary border-accent/25'
+                        : 'bg-bg-surface text-text-primary';
+
+                  return (
+                    <div key={msg.id} className={clsx('max-w-[900px] w-fit', isUser ? 'ml-auto' : 'mr-auto')}>
+                      {msg.role === 'assistant' && msg.providerId && (
+                        <div className="text-xs text-text-tertiary mb-1 flex items-center gap-2">
+                          <span>
+                            {AGENT_CONFIGS[msg.providerId]?.avatar} {AGENT_CONFIGS[msg.providerId]?.name}
+                          </span>
+                          {isSummary && (
+                            <span className="px-2 py-0.5 rounded-full border border-accent/25 bg-accent/10 text-accent text-[11px] font-semibold">
+                              FINAL SUMMARY
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <div className={clsx('rounded-2xl px-4 py-3 border border-border-subtle', bubbleClass)}>
+                        <div className={clsx('text-sm whitespace-pre-wrap leading-relaxed', isSummary && 'text-[15px]')}>
+                          {msg.content}
+                        </div>
+                      </div>
                     </div>
-                  )}
-                  <div className={clsx('rounded-2xl px-4 py-3 border border-border-subtle', bubbleClass)}>
-                    <div className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+            </div>
 
           <div className="border-t border-border-subtle p-3 bg-bg-surface">
             <div className="flex gap-2">
