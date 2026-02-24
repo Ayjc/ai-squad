@@ -4,7 +4,7 @@ import { Send, Sparkles, Users } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useProjectStore } from '../stores';
 import { askProvider } from '../services/tauriService';
-import { chatAppendMessage, chatCreateConversation, chatCreateRun, chatListConversations, chatListMessagesPlain, chatLogStep } from '../services/chatService';
+import { chatAppendMessage, chatCreateConversation, chatCreateRun, chatListConversations, chatListMessagesPlain, chatListRunStepsPlain, chatLogStep } from '../services/chatService';
 import { AGENT_CONFIGS } from '../types/agent';
 
 type ChatRole = 'user' | 'assistant' | 'system';
@@ -37,6 +37,18 @@ type ChatRun = {
   aggregator: string;
   steps: RunStep[];
   aggregatorStep: RunStep;
+};
+
+type RunStepDetails = {
+  providerId: string;
+  status: StepStatus;
+  durationMs?: number;
+  errorCategory?: string;
+  errorRaw?: string;
+  input?: string;
+  output?: string;
+  startedAt?: string;
+  completedAt?: string;
 };
 
 const containerVariants = {
@@ -78,6 +90,8 @@ export default function Chat() {
   const [input, setInput] = useState('');
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [activeRun, setActiveRun] = useState<ChatRun | null>(null);
+  const [runDetails, setRunDetails] = useState<Record<string, RunStepDetails>>({});
+  const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [showProviderReplies, setShowProviderReplies] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
@@ -182,6 +196,8 @@ export default function Chat() {
       aggregatorStep: { providerId: aggregator, status: 'pending' },
     };
     setActiveRun(initialRun);
+    setRunDetails({});
+    setSelectedStepId(null);
 
     // Initial audit breadcrumbs.
     await Promise.allSettled(
@@ -214,6 +230,15 @@ export default function Chat() {
           steps: r.steps.map((s) => s.providerId === pid ? { ...s, status: 'running', startedAt } : s),
         };
       });
+      setRunDetails((d) => ({
+        ...d,
+        [pid]: {
+          providerId: pid,
+          status: 'running',
+          startedAt: new Date(startedAt).toISOString(),
+          input: text,
+        },
+      }));
       void chatLogStep({
         runId,
         providerId: pid,
@@ -236,6 +261,20 @@ export default function Chat() {
               : s),
           };
         });
+
+        setRunDetails((d) => ({
+          ...d,
+          [pid]: {
+            providerId: pid,
+            status: 'failed',
+            durationMs,
+            errorCategory: 'no_output',
+            errorRaw: 'ask_provider returned null',
+            startedAt: new Date(startedAt).toISOString(),
+            completedAt: new Date(completedAt).toISOString(),
+            input: text,
+          },
+        }));
 
         void chatLogStep({
           runId,
@@ -262,6 +301,19 @@ export default function Chat() {
             : s),
         };
       });
+
+      setRunDetails((d) => ({
+        ...d,
+        [pid]: {
+          providerId: pid,
+          status: 'completed',
+          durationMs,
+          startedAt: new Date(startedAt).toISOString(),
+          completedAt: new Date(completedAt).toISOString(),
+          input: text,
+          output: content,
+        },
+      }));
 
       void chatLogStep({
         runId,
@@ -305,6 +357,15 @@ export default function Chat() {
         aggregatorStep: { ...r.aggregatorStep, status: 'running', startedAt: aggStartedAt },
       };
     });
+    setRunDetails((d) => ({
+      ...d,
+      [aggregator]: {
+        providerId: aggregator,
+        status: 'running',
+        startedAt: new Date(aggStartedAt).toISOString(),
+        input: aggInput,
+      },
+    }));
 
     void chatLogStep({
       runId,
@@ -327,6 +388,20 @@ export default function Chat() {
         };
       });
 
+      setRunDetails((d) => ({
+        ...d,
+        [aggregator]: {
+          providerId: aggregator,
+          status: 'failed',
+          durationMs: aggDurationMs,
+          errorCategory: 'no_output',
+          errorRaw: 'ask_provider returned null',
+          startedAt: new Date(aggStartedAt).toISOString(),
+          completedAt: new Date(aggCompletedAt).toISOString(),
+          input: aggInput,
+        },
+      }));
+
       void chatLogStep({
         runId,
         providerId: aggregator,
@@ -346,6 +421,19 @@ export default function Chat() {
           aggregatorStep: { ...r.aggregatorStep, status: 'completed', startedAt: aggStartedAt, completedAt: aggCompletedAt, durationMs: aggDurationMs },
         };
       });
+
+      setRunDetails((d) => ({
+        ...d,
+        [aggregator]: {
+          providerId: aggregator,
+          status: 'completed',
+          durationMs: aggDurationMs,
+          startedAt: new Date(aggStartedAt).toISOString(),
+          completedAt: new Date(aggCompletedAt).toISOString(),
+          input: aggInput,
+          output: aggOut ?? undefined,
+        },
+      }));
 
       void chatLogStep({
         runId,
@@ -612,8 +700,39 @@ export default function Chat() {
                             : s.status === 'failed'
                               ? 'bg-error'
                               : 'bg-text-tertiary';
+                      const key = s.providerId;
+                      const selected = selectedStepId === key;
                       return (
-                        <div key={s.providerId} className="flex items-center justify-between gap-3">
+                        <button
+                          type="button"
+                          key={s.providerId}
+                          onClick={async () => {
+                            setSelectedStepId(key);
+                            const rows = await chatListRunStepsPlain(activeRun.id);
+                            const latest = [...rows].reverse().find((r) => r.provider_id === s.providerId);
+                            if (!latest) return;
+                            setRunDetails((d) => ({
+                              ...d,
+                              [key]: {
+                                providerId: key,
+                                status: (latest.status as StepStatus) ?? 'pending',
+                                durationMs: latest.duration_ms ?? undefined,
+                                errorCategory: latest.error_category ?? undefined,
+                                errorRaw: latest.error_raw ?? undefined,
+                                input: latest.input ?? undefined,
+                                output: latest.output ?? undefined,
+                                startedAt: latest.started_at ?? undefined,
+                                completedAt: latest.completed_at ?? undefined,
+                              },
+                            }));
+                          }}
+                          className={clsx(
+                            'w-full flex items-center justify-between gap-3 px-2 py-1.5 rounded-lg border transition-colors',
+                            selected
+                              ? 'bg-accent-muted border-accent/25'
+                              : 'border-transparent hover:border-border-default hover:bg-bg-secondary/40'
+                          )}
+                        >
                           <div className="flex items-center gap-2 min-w-0">
                             <span className={clsx('w-2 h-2 rounded-full', dot)} />
                             <span className="text-sm text-text-primary truncate">{cfg?.name ?? s.providerId}</span>
@@ -621,7 +740,7 @@ export default function Chat() {
                           <div className="text-xs text-text-tertiary tabular-nums">
                             {typeof s.durationMs === 'number' ? `${s.durationMs}ms` : s.status === 'running' ? '...' : ''}
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -640,8 +759,38 @@ export default function Chat() {
                           : s.status === 'failed'
                             ? 'bg-error'
                             : 'bg-text-tertiary';
+                    const key = s.providerId;
+                    const selected = selectedStepId === key;
                     return (
-                      <div className="flex items-center justify-between gap-3">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setSelectedStepId(key);
+                          const rows = await chatListRunStepsPlain(activeRun.id);
+                          const latest = [...rows].reverse().find((r) => r.provider_id === s.providerId);
+                          if (!latest) return;
+                          setRunDetails((d) => ({
+                            ...d,
+                            [key]: {
+                              providerId: key,
+                              status: (latest.status as StepStatus) ?? 'pending',
+                              durationMs: latest.duration_ms ?? undefined,
+                              errorCategory: latest.error_category ?? undefined,
+                              errorRaw: latest.error_raw ?? undefined,
+                              input: latest.input ?? undefined,
+                              output: latest.output ?? undefined,
+                              startedAt: latest.started_at ?? undefined,
+                              completedAt: latest.completed_at ?? undefined,
+                            },
+                          }));
+                        }}
+                        className={clsx(
+                          'w-full flex items-center justify-between gap-3 px-2 py-1.5 rounded-lg border transition-colors',
+                          selected
+                            ? 'bg-accent-muted border-accent/25'
+                            : 'border-transparent hover:border-border-default hover:bg-bg-secondary/40'
+                        )}
+                      >
                         <div className="flex items-center gap-2 min-w-0">
                           <span className={clsx('w-2 h-2 rounded-full', dot)} />
                           <span className="text-sm text-text-primary truncate">{cfg?.name ?? s.providerId}</span>
@@ -649,10 +798,61 @@ export default function Chat() {
                         <div className="text-xs text-text-tertiary tabular-nums">
                           {typeof s.durationMs === 'number' ? `${s.durationMs}ms` : s.status === 'running' ? '...' : ''}
                         </div>
-                      </div>
+                      </button>
                     );
                   })()}
                 </div>
+
+                {selectedStepId && runDetails[selectedStepId] && (
+                  <div className="pt-3 border-t border-border-subtle">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-text-tertiary">Step Details</div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStepId(null)}
+                        className="text-xs text-text-tertiary hover:text-text-primary"
+                      >
+                        Close
+                      </button>
+                    </div>
+
+                    <div className="mt-2 space-y-2">
+                      <div className="text-xs text-text-secondary">
+                        <span className="text-text-tertiary">Provider:</span> {runDetails[selectedStepId].providerId}
+                      </div>
+                      <div className="text-xs text-text-secondary">
+                        <span className="text-text-tertiary">Status:</span> {runDetails[selectedStepId].status}
+                        {typeof runDetails[selectedStepId].durationMs === 'number' && (
+                          <span className="ml-2 text-text-tertiary">({runDetails[selectedStepId].durationMs}ms)</span>
+                        )}
+                      </div>
+                      {runDetails[selectedStepId].errorCategory && (
+                        <div className="text-xs text-error">
+                          <span className="text-text-tertiary">Error:</span> {runDetails[selectedStepId].errorCategory}
+                        </div>
+                      )}
+                      {runDetails[selectedStepId].errorRaw && (
+                        <div className="text-xs text-text-secondary whitespace-pre-wrap">
+                          <span className="text-text-tertiary">Raw:</span> {runDetails[selectedStepId].errorRaw}
+                        </div>
+                      )}
+
+                      {runDetails[selectedStepId].input && (
+                        <details className="rounded-lg border border-border-subtle bg-bg-surface px-3 py-2">
+                          <summary className="text-xs text-text-secondary cursor-pointer">Input</summary>
+                          <div className="mt-2 text-xs text-text-secondary whitespace-pre-wrap">{runDetails[selectedStepId].input}</div>
+                        </details>
+                      )}
+
+                      {runDetails[selectedStepId].output && (
+                        <details className="rounded-lg border border-border-subtle bg-bg-surface px-3 py-2">
+                          <summary className="text-xs text-text-secondary cursor-pointer">Output</summary>
+                          <div className="mt-2 text-xs text-text-secondary whitespace-pre-wrap">{runDetails[selectedStepId].output}</div>
+                        </details>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div className="pt-2 border-t border-border-subtle">
                   <div className="text-xs text-text-tertiary mb-2">Question</div>

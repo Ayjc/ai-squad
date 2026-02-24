@@ -45,3 +45,9 @@ pub fn chat_log_step(db: State<'_, DbState>, input: NewStepInput) -> Result<Chat
     let conn = db.0.lock().map_err(|e| e.to_string())?;
     crate::chat_db::upsert_step(&conn, input)
 }
+
+#[tauri::command]
+pub fn chat_list_run_steps_plain(db: State<'_, DbState>, run_id: String) -> Result<Vec<crate::chat_runs::ChatRunStepPlain>, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    crate::chat_runs::list_steps_plain(&conn, run_id)
+}

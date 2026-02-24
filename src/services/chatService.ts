@@ -135,3 +135,21 @@ export async function chatLogStep(args: {
     },
   });
 }
+
+export type ChatRunStepPlain = {
+  id: number;
+  run_id: string;
+  provider_id: string;
+  status: string;
+  duration_ms: number | null;
+  error_category: string | null;
+  error_raw: string | null;
+  input: string | null;
+  output: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+};
+
+export async function chatListRunStepsPlain(runId: string): Promise<ChatRunStepPlain[]> {
+  return await invoke<ChatRunStepPlain[]>('chat_list_run_steps_plain', { runId });
+}

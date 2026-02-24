@@ -6,6 +6,7 @@ mod chat;
 mod chat_cmd;
 mod chat_db;
 mod chat_plain;
+mod chat_runs;
 mod config;
 mod db;
 mod keys;
@@ -41,6 +42,7 @@ fn main() {
             chat_cmd::chat_list_messages_plain,
             chat_cmd::chat_create_run,
             chat_cmd::chat_log_step,
+            chat_cmd::chat_list_run_steps_plain,
 
             // project commands
             project::get_project_info,
