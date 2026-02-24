@@ -61,7 +61,7 @@ pub async fn provider_chat(req: ProviderChatRequest) -> Result<ProviderChatRespo
 
     let out = providers::anthropic::chat(&api_key, &req.model, msgs, max_tokens)
         .await
-        .map_err(|e| format!("{}: {}", e.category(), e.message))?;
+        .map_err(|e| format!("{}|{}|{}", e.source, e.category(), e.message))?;
 
     Ok(ProviderChatResponse { content: out })
 }

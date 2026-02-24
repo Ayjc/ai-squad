@@ -259,6 +259,10 @@ export default function Chat() {
       });
 
       let output: string | null = null;
+      let used: 'api' | 'cli' = 'cli';
+      let apiErrorCategory: string | undefined;
+      let apiErrorRaw: string | undefined;
+
       if (pid === 'claude') {
         const has = await hasApiKey('claude');
         if (has) {
@@ -270,8 +274,17 @@ export default function Chat() {
               max_tokens: 1024,
             });
             output = res.content;
+            used = 'api';
           } catch (e) {
-            // fallback below
+            const raw = String(e);
+            apiErrorRaw = raw;
+            // Expected format: source|category|message (from Rust).
+            const parts = raw.split('|');
+            if (parts.length >= 2) {
+              apiErrorCategory = parts[1];
+            } else {
+              apiErrorCategory = 'unknown';
+            }
             console.warn('Claude API failed, falling back to CLI ask_provider:', e);
           }
         }
@@ -279,18 +292,22 @@ export default function Chat() {
 
       if (output == null) {
         output = await askProvider(pid, text, currentProject ?? undefined);
+        used = 'cli';
       }
 
       const completedAt = Date.now();
       const durationMs = completedAt - startedAt;
 
       if (output == null) {
+        const errorCategory = apiErrorCategory ?? 'no_output';
+        const errorRaw = apiErrorRaw ?? 'ask_provider returned null';
+
         setActiveRun((r) => {
           if (!r || r.id !== runId) return r;
           return {
             ...r,
             steps: r.steps.map((s) => s.providerId === pid
-              ? { ...s, status: 'failed', startedAt, completedAt, durationMs, error: 'no output' }
+              ? { ...s, status: 'failed', startedAt, completedAt, durationMs, error: errorCategory }
               : s),
           };
         });
@@ -301,8 +318,8 @@ export default function Chat() {
             providerId: pid,
             status: 'failed',
             durationMs,
-            errorCategory: 'no_output',
-            errorRaw: 'ask_provider returned null',
+            errorCategory,
+            errorRaw,
             startedAt: new Date(startedAt).toISOString(),
             completedAt: new Date(completedAt).toISOString(),
             input: text,
@@ -314,14 +331,14 @@ export default function Chat() {
           providerId: pid,
           status: 'failed',
           durationMs,
-          errorCategory: 'no_output',
-          errorRaw: 'ask_provider returned null',
+          errorCategory,
+          errorRaw: `used=${used}; ${errorRaw}`,
           startedAt: new Date(startedAt).toISOString(),
           completedAt: new Date(completedAt).toISOString(),
           input: text,
         });
 
-        return { pid, content: `(${pid}) failed (no output). Duration: ${durationMs}ms`, durationMs };
+        return { pid, content: `(${pid}) failed (${errorCategory}). Duration: ${durationMs}ms`, durationMs };
       }
 
       const content = output.trim() || `(${pid}) empty output. Duration: ${durationMs}ms`;
@@ -353,6 +370,8 @@ export default function Chat() {
         providerId: pid,
         status: 'completed',
         durationMs,
+        errorCategory: used === 'api' ? 'source_api' : 'source_cli',
+        errorRaw: used === 'api' ? 'used=api' : 'used=cli',
         startedAt: new Date(startedAt).toISOString(),
         completedAt: new Date(completedAt).toISOString(),
         input: text,
@@ -409,6 +428,10 @@ export default function Chat() {
     });
 
     let aggOut: string | null = null;
+    let aggUsed: 'api' | 'cli' = 'cli';
+    let aggApiErrorCategory: string | undefined;
+    let aggApiErrorRaw: string | undefined;
+
     if (aggregator === 'claude') {
       const has = await hasApiKey('claude');
       if (has) {
@@ -420,7 +443,12 @@ export default function Chat() {
             max_tokens: 1024,
           });
           aggOut = res.content;
+          aggUsed = 'api';
         } catch (e) {
+          const raw = String(e);
+          aggApiErrorRaw = raw;
+          const parts = raw.split('|');
+          aggApiErrorCategory = parts.length >= 2 ? parts[1] : 'unknown';
           console.warn('Claude aggregator API failed, falling back to CLI:', e);
         }
       }
@@ -428,17 +456,21 @@ export default function Chat() {
 
     if (aggOut == null) {
       aggOut = await askProvider(aggregator, aggInput, currentProject ?? undefined);
+      aggUsed = 'cli';
     }
 
     const aggCompletedAt = Date.now();
     const aggDurationMs = aggCompletedAt - aggStartedAt;
 
     if (aggOut == null) {
+      const errorCategory = aggApiErrorCategory ?? 'no_output';
+      const errorRaw = aggApiErrorRaw ?? 'ask_provider returned null';
+
       setActiveRun((r) => {
         if (!r || r.id !== runId) return r;
         return {
           ...r,
-          aggregatorStep: { ...r.aggregatorStep, status: 'failed', startedAt: aggStartedAt, completedAt: aggCompletedAt, durationMs: aggDurationMs, error: 'no output' },
+          aggregatorStep: { ...r.aggregatorStep, status: 'failed', startedAt: aggStartedAt, completedAt: aggCompletedAt, durationMs: aggDurationMs, error: errorCategory },
         };
       });
 
@@ -448,8 +480,8 @@ export default function Chat() {
           providerId: aggregator,
           status: 'failed',
           durationMs: aggDurationMs,
-          errorCategory: 'no_output',
-          errorRaw: 'ask_provider returned null',
+          errorCategory,
+          errorRaw,
           startedAt: new Date(aggStartedAt).toISOString(),
           completedAt: new Date(aggCompletedAt).toISOString(),
           input: aggInput,
@@ -461,8 +493,8 @@ export default function Chat() {
         providerId: aggregator,
         status: 'failed',
         durationMs: aggDurationMs,
-        errorCategory: 'no_output',
-        errorRaw: 'ask_provider returned null',
+        errorCategory,
+        errorRaw: `used=${aggUsed}; ${errorRaw}`,
         startedAt: new Date(aggStartedAt).toISOString(),
         completedAt: new Date(aggCompletedAt).toISOString(),
         input: aggInput,
@@ -494,6 +526,8 @@ export default function Chat() {
         providerId: aggregator,
         status: 'completed',
         durationMs: aggDurationMs,
+        errorCategory: aggUsed === 'api' ? 'source_api' : 'source_cli',
+        errorRaw: aggUsed === 'api' ? 'used=api' : 'used=cli',
         startedAt: new Date(aggStartedAt).toISOString(),
         completedAt: new Date(aggCompletedAt).toISOString(),
         input: aggInput,

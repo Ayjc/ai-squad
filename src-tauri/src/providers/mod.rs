@@ -14,6 +14,13 @@ pub enum ProviderErrorKind {
 pub struct ProviderError {
     pub kind: ProviderErrorKind,
     pub message: String,
+    pub source: &'static str,
+}
+
+impl ProviderError {
+    pub fn new(kind: ProviderErrorKind, message: String, source: &'static str) -> Self {
+        Self { kind, message, source }
+    }
 }
 
 impl ProviderError {

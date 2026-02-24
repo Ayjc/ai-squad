@@ -40,12 +40,12 @@ pub struct AnthropicMessagesResponse {
 
 fn map_reqwest_err(e: reqwest::Error) -> ProviderError {
     if e.is_timeout() {
-        return ProviderError { kind: ProviderErrorKind::Timeout, message: e.to_string() };
+        return ProviderError::new(ProviderErrorKind::Timeout, e.to_string(), "anthropic");
     }
     if e.is_connect() {
-        return ProviderError { kind: ProviderErrorKind::Network, message: e.to_string() };
+        return ProviderError::new(ProviderErrorKind::Network, e.to_string(), "anthropic");
     }
-    ProviderError { kind: ProviderErrorKind::Unknown, message: e.to_string() }
+    ProviderError::new(ProviderErrorKind::Unknown, e.to_string(), "anthropic")
 }
 
 pub async fn chat(api_key: &str, model: &str, messages: Vec<AnthropicMessage>, max_tokens: u32) -> Result<String, ProviderError> {
@@ -71,20 +71,20 @@ pub async fn chat(api_key: &str, model: &str, messages: Vec<AnthropicMessage>, m
     let body = resp.text().await.map_err(map_reqwest_err)?;
 
     if status == StatusCode::UNAUTHORIZED || status == StatusCode::FORBIDDEN {
-        return Err(ProviderError { kind: ProviderErrorKind::Auth, message: body });
+        return Err(ProviderError::new(ProviderErrorKind::Auth, body, "anthropic"));
     }
     if status == StatusCode::TOO_MANY_REQUESTS {
-        return Err(ProviderError { kind: ProviderErrorKind::RateLimit, message: body });
+        return Err(ProviderError::new(ProviderErrorKind::RateLimit, body, "anthropic"));
     }
     if status == StatusCode::BAD_REQUEST {
-        return Err(ProviderError { kind: ProviderErrorKind::BadRequest, message: body });
+        return Err(ProviderError::new(ProviderErrorKind::BadRequest, body, "anthropic"));
     }
     if !status.is_success() {
-        return Err(ProviderError { kind: ProviderErrorKind::Unknown, message: format!("HTTP {}: {}", status, body) });
+        return Err(ProviderError::new(ProviderErrorKind::Unknown, format!("HTTP {}: {}", status, body), "anthropic"));
     }
 
     let parsed: AnthropicMessagesResponse = serde_json::from_str(&body)
-        .map_err(|e| ProviderError { kind: ProviderErrorKind::Unknown, message: format!("Failed to parse response: {e}. Body: {body}") })?;
+        .map_err(|e| ProviderError::new(ProviderErrorKind::Unknown, format!("Failed to parse response: {e}. Body: {body}"), "anthropic"))?;
 
     let mut out = String::new();
     for block in parsed.content {
