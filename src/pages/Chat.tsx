@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Send, Sparkles, Users } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useProjectStore } from '../stores';
+import { askProvider } from '../services/tauriService';
 import { AGENT_CONFIGS } from '../types/agent';
 
 type ChatRole = 'user' | 'assistant' | 'system';
@@ -32,7 +33,7 @@ const itemVariants = {
 const makeId = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
 export default function Chat() {
-  const { currentProjectName } = useProjectStore();
+  const { currentProjectName, currentProject } = useProjectStore();
 
   const providers = useMemo(() => Object.keys(AGENT_CONFIGS), []);
   const [selectedProviders, setSelectedProviders] = useState<string[]>(['codex', 'claude']);
@@ -63,23 +64,55 @@ export default function Chat() {
     setMessages((m) => [...m, userMsg]);
     setInput('');
 
-    // Placeholder responses for the orchestration scaffold.
-    // Next step: replace with real provider API calls + an aggregator run.
     const now = new Date();
-    const providerReplies: ChatMessage[] = selectedProviders.map((pid) => ({
+
+    const providerResults = await Promise.all(
+      selectedProviders.map(async (pid) => {
+        const startedAt = Date.now();
+        const output = await askProvider(pid, text, currentProject ?? undefined);
+        const durationMs = Date.now() - startedAt;
+
+        if (output == null) {
+          return {
+            pid,
+            content: `(${pid}) failed (no output). Duration: ${durationMs}ms`,
+          };
+        }
+
+        return {
+          pid,
+          content: output.trim() || `(${pid}) empty output. Duration: ${durationMs}ms`,
+        };
+      })
+    );
+
+    const providerReplies: ChatMessage[] = providerResults.map((r) => ({
       id: makeId(),
       role: 'assistant',
-      providerId: pid,
-      content: `(${pid}) placeholder reply for: ${text}`,
+      providerId: r.pid,
+      content: r.content,
       createdAt: now,
     }));
+
+    const aggInput = [
+      `User question:\n${text}`,
+      '',
+      'Provider replies:',
+      ...providerResults.map((r) => `- ${r.pid}:\n${r.content}`),
+      '',
+      'Task: Summarize the best answer and highlight disagreements. Keep it concise.',
+    ].join('\n');
+
+    const aggStartedAt = Date.now();
+    const aggOut = await askProvider(aggregator, aggInput, currentProject ?? undefined);
+    const aggDurationMs = Date.now() - aggStartedAt;
 
     const aggMsg: ChatMessage = {
       id: makeId(),
       role: 'assistant',
       providerId: aggregator,
-      content: `(${aggregator} aggregator) placeholder summary: received ${providerReplies.length} replies.`,
-      createdAt: now,
+      content: (aggOut?.trim() || '(aggregator) failed / empty output.') + `\n\n(duration: ${aggDurationMs}ms)` ,
+      createdAt: new Date(),
     };
 
     setMessages((m) => [...m, ...providerReplies, aggMsg]);
