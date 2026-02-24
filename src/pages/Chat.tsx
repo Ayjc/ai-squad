@@ -267,7 +267,9 @@ export default function Chat() {
         const has = await hasApiKey('claude');
         if (has) {
           try {
-            const history = messages
+            // Build context from DB for stability across restarts.
+            const convHistory = await chatListMessagesPlain(convId);
+            const history = convHistory
               .filter((m) => m.role === 'user' || m.role === 'assistant')
               .slice(-12)
               .map((m) => ({
@@ -444,7 +446,8 @@ export default function Chat() {
       const has = await hasApiKey('claude');
       if (has) {
         try {
-          const history = messages
+          const convHistory = await chatListMessagesPlain(convId);
+          const history = convHistory
             .filter((m) => m.role === 'user' || m.role === 'assistant')
             .slice(-12)
             .map((m) => ({
