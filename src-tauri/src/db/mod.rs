@@ -5,6 +5,8 @@ use tauri::{AppHandle, Manager};
 use std::sync::Mutex;
 use rusqlite::{Connection, params};
 
+use crate::paths;
+
 pub struct DbState(pub Mutex<Connection>);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -60,10 +62,13 @@ pub struct CollaborationStatRecord {
 
 /// 初始化数据库
 pub fn init_database(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    let app_dir = app.path().app_data_dir()?;
-    std::fs::create_dir_all(&app_dir)?;
+    // Ensure workspace directories exist under ~/.ai-squad
+    let base_dir = paths::aisquad_home_dir().map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+    let data_dir = paths::data_dir().map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+    std::fs::create_dir_all(&base_dir)?;
+    std::fs::create_dir_all(&data_dir)?;
 
-    let db_path = app_dir.join("data.db");
+    let db_path = paths::db_path().map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
     let conn = Connection::open(&db_path)?;
 
     // 创建表

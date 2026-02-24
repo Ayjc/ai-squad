@@ -4,6 +4,7 @@
 mod ccb;
 mod db;
 mod project;
+mod paths;
 
 fn main() {
     tauri::Builder::default()
