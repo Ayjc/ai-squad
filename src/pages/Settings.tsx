@@ -4,6 +4,7 @@ import { RefreshCw, Trash2 } from 'lucide-react';
 import { useAgentStore } from '../stores';
 import { getCollaborationStats } from '../services/tauriService';
 import { retentionRun } from '../services/retentionService';
+import { hasApiKey, setApiKey } from '../services/keyService';
 import type { CollaborationStat } from '../types/common';
 import { clsx } from 'clsx';
 
@@ -51,6 +52,10 @@ export default function Settings() {
   const [collabStats, setCollabStats] = useState<CollaborationStat[]>([]);
   const [loading, setLoading] = useState(false);
   const [retentionLoading, setRetentionLoading] = useState(false);
+
+  const [claudeKeyInput, setClaudeKeyInput] = useState('');
+  const [claudeSaving, setClaudeSaving] = useState(false);
+  const [claudeKeyConfigured, setClaudeKeyConfigured] = useState<boolean | null>(null);
   const [retentionReport, setRetentionReport] = useState<null | {
     dbPath: string;
     dbSizeBytes: number;
@@ -75,6 +80,15 @@ export default function Settings() {
 
   useEffect(() => {
     fetchStats();
+    (async () => {
+      try {
+        const ok = await hasApiKey('claude');
+        setClaudeKeyConfigured(ok);
+      } catch (err) {
+        console.warn('Check Claude key failed:', err);
+        setClaudeKeyConfigured(false);
+      }
+    })();
   }, []);
 
   const formatBytes = (bytes: number) => {
@@ -124,41 +138,116 @@ export default function Settings() {
         {/* Provider 配置 */}
         <motion.div variants={itemVariants} className="card mb-6">
           <h3 className="font-medium text-text-primary mb-4">AI Provider</h3>
-          <div className="space-y-3">
-            {agents.map((agent, index) => (
-              <motion.div
-                key={agent.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05, duration: 0.25, ease: 'easeOut' }}
-                className="flex items-center gap-4 p-3 rounded-lg bg-bg-primary"
-              >
-                <span className="text-2xl">{agent.avatar}</span>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-text-primary">{agent.name}</span>
-                    <span
-                      className={clsx(
-                        'w-2 h-2 rounded-full',
-                        agent.status === 'online'
-                          ? 'bg-success'
-                          : agent.status === 'working'
-                            ? 'bg-warning'
-                            : 'bg-text-secondary'
-                      )}
-                    />
-                    <span className="text-xs text-text-secondary">{agent.status}</span>
+
+          <div className="space-y-4">
+            <div className="rounded-xl border border-border-subtle bg-bg-primary p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-text-primary">Claude API Key</div>
+                  <div className="text-xs text-text-secondary mt-1">
+                    存储位置：`~/.ai-squad/keys.json.enc`（加密） + keyring 主密钥
                   </div>
-                  <p className="text-xs text-text-secondary">{agent.displayName}</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-text-primary">默契 {agent.level}</p>
-                  <p className="text-xs text-text-secondary">
-                    {agent.tasksCompleted} 完成 / {agent.tasksFailed ?? 0} 失败
-                  </p>
+                <div className={clsx('text-xs px-2 py-1 rounded-full border', 'border-border-subtle text-text-tertiary')}>
+                  V1
                 </div>
-              </motion.div>
-            ))}
+              </div>
+
+              <div className="mt-3 flex gap-2">
+                <input
+                  value={claudeKeyInput}
+                  onChange={(e) => setClaudeKeyInput(e.target.value)}
+                  type="password"
+                  placeholder="sk-ant-..."
+                  className="flex-1 px-3 py-2 rounded-lg border border-border-subtle bg-bg-surface text-sm"
+                />
+                <button
+                  type="button"
+                  className="btn-primary px-4"
+                  disabled={claudeSaving}
+                  onClick={async () => {
+                    const v = claudeKeyInput.trim();
+                    if (!v) return;
+                    setClaudeSaving(true);
+                    try {
+                      await setApiKey('claude', v);
+                      setClaudeKeyInput('');
+                      const ok = await hasApiKey('claude');
+                      setClaudeKeyConfigured(ok);
+                    } catch (err) {
+                      console.warn('Save Claude key failed:', err);
+                    } finally {
+                      setClaudeSaving(false);
+                    }
+                  }}
+                >
+                  保存
+                </button>
+              </div>
+
+              <div className="mt-2 flex items-center justify-between">
+                <div className="text-xs text-text-secondary">
+                  状态：{
+                    claudeKeyConfigured == null
+                      ? '检测中...'
+                      : claudeKeyConfigured
+                        ? '已配置'
+                        : '未配置'
+                  }
+                </div>
+                <button
+                  type="button"
+                  className="btn-ghost text-xs"
+                  onClick={async () => {
+                    try {
+                      const ok = await hasApiKey('claude');
+                      setClaudeKeyConfigured(ok);
+                    } catch (err) {
+                      console.warn('Check Claude key failed:', err);
+                    }
+                  }}
+                >
+                  检测
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {agents.map((agent, index) => (
+                <motion.div
+                  key={agent.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05, duration: 0.25, ease: 'easeOut' }}
+                  className="flex items-center gap-4 p-3 rounded-lg bg-bg-primary"
+                >
+                  <span className="text-2xl">{agent.avatar}</span>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-text-primary">{agent.name}</span>
+                      <span
+                        className={clsx(
+                          'w-2 h-2 rounded-full',
+                          agent.status === 'online'
+                            ? 'bg-success'
+                            : agent.status === 'working'
+                              ? 'bg-warning'
+                              : 'bg-text-secondary'
+                        )}
+                      />
+                      <span className="text-xs text-text-secondary">{agent.status}</span>
+                    </div>
+                    <p className="text-xs text-text-secondary">{agent.displayName}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-text-primary">默契 {agent.level}</p>
+                    <p className="text-xs text-text-secondary">
+                      {agent.tasksCompleted} 完成 / {agent.tasksFailed ?? 0} 失败
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </motion.div>
 
