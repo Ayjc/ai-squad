@@ -1,5 +1,3 @@
-// Provider 管理模块
-
 use std::process::Command;
 use serde::{Deserialize, Serialize};
 
@@ -12,7 +10,6 @@ pub struct Provider {
     pub avatar: String,
 }
 
-/// 获取所有支持的 providers
 pub fn get_supported_providers() -> Vec<Provider> {
     vec![
         Provider {
@@ -46,13 +43,27 @@ pub fn get_supported_providers() -> Vec<Provider> {
     ]
 }
 
-/// 检查 provider 是否在线
-pub fn check_provider_status(provider_id: &str) -> bool {
-    let output = Command::new("ping")
-        .arg(provider_id)
-        .output();
+/// Check provider status using CCB's ping command with work_dir context
+pub fn check_provider_status(provider_id: &str, work_dir: Option<&str>) -> bool {
+    let ccb_ping = dirs::home_dir()
+        .map(|h| h.join(".local/share/codex-dual/bin/ping"))
+        .unwrap_or_default();
 
-    match output {
+    // Prefer CCB ping binary path, fall back to "ping" in PATH
+    let ping_cmd = if ccb_ping.exists() {
+        ccb_ping.to_string_lossy().to_string()
+    } else {
+        "ping".to_string()
+    };
+
+    let mut cmd = Command::new(&ping_cmd);
+    cmd.arg(provider_id);
+
+    if let Some(wd) = work_dir {
+        cmd.current_dir(wd);
+    }
+
+    match cmd.output() {
         Ok(o) => o.status.success(),
         Err(_) => false,
     }

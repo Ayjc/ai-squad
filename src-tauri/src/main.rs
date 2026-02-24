@@ -3,10 +3,12 @@
 
 mod ccb;
 mod db;
+mod project;
 
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // 初始化数据库
             let app_handle = app.handle();
@@ -15,6 +17,12 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            // project commands
+            project::get_project_info,
+            project::start_ccb,
+            project::stop_ccb,
+            project::get_ccb_status,
+            // existing commands
             ccb::ping_provider,
             ccb::ask_provider,
             ccb::cancel_task,

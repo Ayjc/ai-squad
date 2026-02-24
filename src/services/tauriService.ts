@@ -206,9 +206,9 @@ const mapTaskToRecord = (task: Task): TaskRecord => {
   };
 };
 
-export async function getProviders(): Promise<ProviderRuntimeStatus[] | null> {
+export async function getProviders(workDir?: string): Promise<ProviderRuntimeStatus[] | null> {
   try {
-    return await invoke<ProviderRuntimeStatus[]>('get_providers');
+    return await invoke<ProviderRuntimeStatus[]>('get_providers', { workDir: workDir ?? null });
   } catch (error) {
     console.warn('Tauri get_providers 调用失败:', error);
     return null;
@@ -346,11 +346,65 @@ export async function getBestCombo(): Promise<CollaborationStat | null> {
   }
 }
 
-export async function askProvider(provider: string, message: string): Promise<string | null> {
+export async function askProvider(provider: string, message: string, workDir?: string): Promise<string | null> {
   try {
-    return await invoke<string>('ask_provider', { provider, message });
+    return await invoke<string>('ask_provider', { provider, message, workDir: workDir ?? null });
   } catch (error) {
     console.warn('Tauri ask_provider 调用失败:', error);
+    return null;
+  }
+}
+
+// --- Project Management ---
+
+export interface ProjectInfo {
+  path: string;
+  name: string;
+  has_ccb: boolean;
+  mounted_providers: string[];
+}
+
+export interface CcbStatus {
+  running: boolean;
+  mounted: string[];
+}
+
+export async function getProjectInfo(path: string): Promise<ProjectInfo | null> {
+  try {
+    return await invoke<ProjectInfo>('get_project_info', { path });
+  } catch (error) {
+    console.warn('get_project_info failed:', error);
+    return null;
+  }
+}
+
+export async function startCcb(
+  projectPath: string,
+  providers: string[]
+): Promise<CcbStatus | null> {
+  try {
+    return await invoke<CcbStatus>('start_ccb', { projectPath, providers });
+  } catch (error) {
+    console.warn('start_ccb failed:', error);
+    return null;
+  }
+}
+
+export async function stopCcb(projectPath: string): Promise<boolean> {
+  try {
+    await invoke('stop_ccb', { projectPath });
+    return true;
+  } catch (error) {
+    console.warn('stop_ccb failed:', error);
+    return false;
+  }
+}
+
+export async function getCcbStatus(projectPath: string): Promise<CcbStatus | null> {
+  try {
+    return await invoke<CcbStatus>('get_ccb_status', { projectPath });
+  } catch (error) {
+    console.warn('get_ccb_status failed:', error);
     return null;
   }
 }

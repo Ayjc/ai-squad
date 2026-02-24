@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Sparkles, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
-import { useAgentStore, useTaskStore } from '../stores';
+import { useAgentStore, useTaskStore, useProjectStore } from '../stores';
 import type { Task, TaskMode, TaskResult, TaskStep, StepStatus } from '../types/task';
 import { TASK_MODE_INFO } from '../types/task';
 import { clsx } from 'clsx';
@@ -94,6 +94,7 @@ export default function Tasks() {
     updateTaskStep,
   } = useTaskStore();
   const { getRecommendedAgents, getSynergyTrend } = useAgentStore();
+  const { currentProject } = useProjectStore();
 
   const [selectedMode, setSelectedMode] = useState<TaskMode>('parallel');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -146,7 +147,7 @@ export default function Tasks() {
 
   const executeProvider = async (agentId: string, message: string): Promise<TaskResult> => {
     const startedAt = new Date();
-    const response = await askProvider(agentId, message);
+    const response = await askProvider(agentId, message, currentProject ?? undefined);
     const completedAt = new Date();
 
     if (response) {

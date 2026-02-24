@@ -1,5 +1,3 @@
-// Task 调度模块
-
 use std::process::Command;
 use serde::{Deserialize, Serialize};
 
@@ -11,17 +9,32 @@ pub struct TaskInput {
     pub assignees: Vec<String>,
 }
 
-/// 向指定 provider 发送任务
-pub fn send_task(provider: &str, task: &TaskInput) -> Result<String, String> {
+/// Send task to provider using CCB's ask command with work_dir
+pub fn send_task(provider: &str, task: &TaskInput, work_dir: Option<&str>) -> Result<String, String> {
     let message = if task.description.is_empty() {
         task.title.clone()
     } else {
         format!("{}\n\n{}", task.title, task.description)
     };
 
-    let output = Command::new("ask")
-        .arg(provider)
-        .arg(&message)
+    let ask_path = dirs::home_dir()
+        .map(|h| h.join(".local/share/codex-dual/bin/ask"))
+        .unwrap_or_default();
+
+    let ask_cmd = if ask_path.exists() {
+        ask_path.to_string_lossy().to_string()
+    } else {
+        "ask".to_string()
+    };
+
+    let mut cmd = Command::new(&ask_cmd);
+    cmd.arg(provider).arg(&message);
+
+    if let Some(wd) = work_dir {
+        cmd.current_dir(wd);
+    }
+
+    let output = cmd
         .output()
         .map_err(|e| format!("Failed to execute ask: {}", e))?;
 
@@ -32,8 +45,6 @@ pub fn send_task(provider: &str, task: &TaskInput) -> Result<String, String> {
     }
 }
 
-/// 取消正在执行的任务
 pub fn cancel_task(_task_id: &str) -> Result<(), String> {
-    // v1 暂无真实取消能力，先提供可扩展接口。
     Ok(())
 }

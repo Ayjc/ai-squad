@@ -7,11 +7,13 @@ import Squad from './pages/Squad';
 import Tasks from './pages/Tasks';
 import History from './pages/History';
 import Settings from './pages/Settings';
-import { useAgentStore, useTaskStore } from './stores';
+import ProjectSelector from './pages/ProjectSelector';
+import { useAgentStore, useTaskStore, useProjectStore } from './stores';
 import { getProviders, getTasks } from './services/tauriService';
 
 function App() {
   const location = useLocation();
+  const { currentProject } = useProjectStore();
   const {
     agents,
     initializeAgents,
@@ -26,8 +28,13 @@ function App() {
   }, [agents.length, initializeAgents]);
 
   useEffect(() => {
+    if (!currentProject) return;
+
     const syncFromTauri = async () => {
-      const [providers, tasks] = await Promise.all([getProviders(), getTasks()]);
+      const [providers, tasks] = await Promise.all([
+        getProviders(currentProject),
+        getTasks(),
+      ]);
 
       if (providers) {
         syncProviderStatuses(providers);
@@ -39,7 +46,11 @@ function App() {
     };
 
     syncFromTauri();
-  }, [setTasks, syncProviderStatuses]);
+  }, [currentProject, setTasks, syncProviderStatuses]);
+
+  if (!currentProject) {
+    return <ProjectSelector />;
+  }
 
   return (
     <Layout>

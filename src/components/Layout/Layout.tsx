@@ -6,8 +6,10 @@ import {
   ClipboardList,
   History,
   Settings,
-  Zap
+  Zap,
+  FolderOpen,
 } from 'lucide-react';
+import { useProjectStore } from '../../stores';
 
 interface LayoutProps {
   children: ReactNode;
@@ -21,16 +23,29 @@ const navItems = [
 ];
 
 export default function Layout({ children }: LayoutProps) {
+  const { currentProjectName, clearCurrentProject, ccbRunning } = useProjectStore();
+
   return (
     <div className="flex h-screen bg-bg-primary text-text-primary">
-      {/* 侧边栏 */}
       <aside className="w-[72px] bg-bg-surface/90 border-r border-border-subtle backdrop-blur-sm flex flex-col items-center py-5 shadow-[inset_-1px_0_0_rgba(44,42,39,0.04)]">
         {/* Logo */}
-        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-accent/24 to-accent/8 border border-accent/25 flex items-center justify-center mb-9 shadow-[0_10px_22px_-14px_rgba(46,122,118,0.48)]">
+        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-accent/24 to-accent/8 border border-accent/25 flex items-center justify-center mb-4 shadow-[0_10px_22px_-14px_rgba(46,122,118,0.48)]">
           <Zap className="w-6 h-6 text-accent" />
         </div>
 
-        {/* 导航 */}
+        {/* CCB Status Dot */}
+        <div className="mb-5 flex flex-col items-center gap-1">
+          <div
+            className={`w-2 h-2 rounded-full ${
+              ccbRunning
+                ? 'bg-success shadow-[0_0_8px_rgba(34,197,94,0.5)]'
+                : 'bg-text-tertiary'
+            }`}
+            title={ccbRunning ? 'CCB Running' : 'CCB Offline'}
+          />
+        </div>
+
+        {/* Navigation */}
         <nav className="flex-1 flex flex-col gap-2.5">
           {navItems.map((item) => (
             <NavLink
@@ -60,16 +75,24 @@ export default function Layout({ children }: LayoutProps) {
           ))}
         </nav>
 
-        {/* 底部设置 */}
-        <NavLink
-          to="/settings"
-          className="w-11 h-11 rounded-xl flex items-center justify-center text-text-secondary border border-transparent hover:text-text-primary hover:bg-bg-secondary/70 hover:border-border-default transition-all duration-200"
-        >
-          <Settings className="w-5 h-5" />
-        </NavLink>
+        {/* Bottom: Switch Project + Settings */}
+        <div className="flex flex-col gap-2.5">
+          <button
+            onClick={clearCurrentProject}
+            title={`${currentProjectName ?? 'Project'} - Click to switch`}
+            className="w-11 h-11 rounded-xl flex items-center justify-center text-text-secondary border border-transparent hover:text-text-primary hover:bg-bg-secondary/70 hover:border-border-default transition-all duration-200"
+          >
+            <FolderOpen className="w-5 h-5" />
+          </button>
+          <NavLink
+            to="/settings"
+            className="w-11 h-11 rounded-xl flex items-center justify-center text-text-secondary border border-transparent hover:text-text-primary hover:bg-bg-secondary/70 hover:border-border-default transition-all duration-200"
+          >
+            <Settings className="w-5 h-5" />
+          </NavLink>
+        </div>
       </aside>
 
-      {/* 主内容区 */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {children}
       </main>
