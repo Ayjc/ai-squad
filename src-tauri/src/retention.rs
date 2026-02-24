@@ -149,3 +149,30 @@ pub fn run_retention(conn: &Connection, dry_run: bool) -> Result<RetentionReport
         deleted_rows: if dry_run { 0 } else { deleted },
     })
 }
+
+// Simple process-local throttle to avoid running vacuum too often.
+static mut LAST_RETENTION_MS: u128 = 0;
+
+pub fn maybe_run_retention(conn: &Connection) {
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
+
+    // At most once per 30 minutes.
+    let should_run = unsafe {
+        if LAST_RETENTION_MS == 0 || (now_ms.saturating_sub(LAST_RETENTION_MS) > 30 * 60 * 1000) {
+            LAST_RETENTION_MS = now_ms;
+            true
+        } else {
+            false
+        }
+    };
+
+    if !should_run {
+        return;
+    }
+
+    // Best-effort; ignore failures.
+    let _ = run_retention(conn, false);
+}
