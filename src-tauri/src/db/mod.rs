@@ -106,6 +106,10 @@ pub fn init_database(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
 
     run_migrations(&conn)?;
 
+    // Chat schema (V1)
+    crate::chat_db::migrate_chat_schema(&conn)
+        .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(std::io::Error::new(std::io::ErrorKind::Other, e))))?;
+
     conn.execute(
         "CREATE TABLE IF NOT EXISTS agent_stats (
             agent_id TEXT PRIMARY KEY,

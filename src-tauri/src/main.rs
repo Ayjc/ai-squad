@@ -2,6 +2,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod ccb;
+mod chat;
+mod chat_cmd;
+mod chat_db;
 mod config;
 mod db;
 mod keys;
@@ -28,6 +31,15 @@ fn main() {
             keys_cmd::set_api_key,
             keys_cmd::has_api_key,
             keys_cmd::reveal_api_key,
+
+            // chat commands
+            chat_cmd::chat_create_conversation,
+            chat_cmd::chat_list_conversations,
+            chat_cmd::chat_append_message,
+            chat_cmd::chat_list_messages,
+            chat_cmd::chat_create_run,
+            chat_cmd::chat_log_step,
+
             // project commands
             project::get_project_info,
             project::start_ccb,

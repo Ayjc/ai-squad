@@ -19,7 +19,7 @@ fn keyring_entry() -> Entry {
     Entry::new(KEYRING_SERVICE, KEYRING_USER).expect("keyring entry")
 }
 
-fn load_or_create_master_key() -> Result<[u8; 32], String> {
+pub fn load_or_create_master_key() -> Result<[u8; 32], String> {
     let entry = keyring_entry();
     match entry.get_password() {
         Ok(b64) => {
