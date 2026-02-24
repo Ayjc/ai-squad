@@ -37,6 +37,17 @@ export default function Chat() {
 
   const providers = useMemo(() => Object.keys(AGENT_CONFIGS), []);
   const [selectedProviders, setSelectedProviders] = useState<string[]>(['codex', 'claude']);
+
+  const parseMentions = (text: string): string[] => {
+    const hits = new Set<string>();
+    providers.forEach((pid) => {
+      const re = new RegExp(`(^|\\s)@${pid}(\\s|$)`, 'i');
+      if (re.test(text)) {
+        hits.add(pid);
+      }
+    });
+    return [...hits];
+  };
   const [aggregator, setAggregator] = useState<string>('claude');
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
@@ -60,6 +71,9 @@ export default function Chat() {
     const text = input.trim();
     if (!text) return;
 
+    const mentioned = parseMentions(text);
+    const effectiveProviders = mentioned.length > 0 ? mentioned : selectedProviders;
+
     const userMsg: ChatMessage = { id: makeId(), role: 'user', content: text, createdAt: new Date() };
     setMessages((m) => [...m, userMsg]);
     setInput('');
@@ -67,7 +81,7 @@ export default function Chat() {
     const now = new Date();
 
     const providerResults = await Promise.all(
-      selectedProviders.map(async (pid) => {
+      effectiveProviders.map(async (pid) => {
         const startedAt = Date.now();
         const output = await askProvider(pid, text, currentProject ?? undefined);
         const durationMs = Date.now() - startedAt;
@@ -94,6 +108,15 @@ export default function Chat() {
       createdAt: now,
     }));
 
+    const overrideNote: ChatMessage | null = mentioned.length > 0
+      ? {
+          id: makeId(),
+          role: 'system',
+          content: `Detected mentions: ${mentioned.map((m) => `@${m}`).join(' ')} (overriding selection)`,
+          createdAt: now,
+        }
+      : null;
+
     const aggInput = [
       `User question:\n${text}`,
       '',
@@ -115,7 +138,7 @@ export default function Chat() {
       createdAt: new Date(),
     };
 
-    setMessages((m) => [...m, ...providerReplies, aggMsg]);
+    setMessages((m) => [...m, ...providerReplies, ...(overrideNote ? [overrideNote] : []), aggMsg]);
   };
 
   return (
