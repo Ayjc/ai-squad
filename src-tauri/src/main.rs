@@ -14,6 +14,8 @@ mod keys_cmd;
 mod paths;
 mod project;
 mod retention;
+mod provider_api;
+mod providers;
 mod retention_cmd;
 mod secure;
 
@@ -48,6 +50,9 @@ fn main() {
 
             // retention
             retention_cmd::retention_run,
+
+            // provider API
+            provider_api::provider_chat,
 
             // project commands
             project::get_project_info,

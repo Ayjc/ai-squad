@@ -4,6 +4,8 @@ import { Send, Sparkles, Users } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useProjectStore } from '../stores';
 import { askProvider } from '../services/tauriService';
+import { providerChat } from '../services/providerApiService';
+import { hasApiKey } from '../services/keyService';
 import { chatAppendMessage, chatCreateConversation, chatCreateRun, chatListConversations, chatListMessagesPlain, chatListRunStepsPlain, chatLogStep } from '../services/chatService';
 import { AGENT_CONFIGS } from '../types/agent';
 
@@ -87,6 +89,7 @@ export default function Chat() {
     return [...hits];
   };
   const [aggregator, setAggregator] = useState<string>('claude');
+  const [claudeModel, setClaudeModel] = useState<string>('claude-4-6-sonnet');
   const [input, setInput] = useState('');
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [activeRun, setActiveRun] = useState<ChatRun | null>(null);
@@ -247,7 +250,29 @@ export default function Chat() {
         input: text,
       });
 
-      const output = await askProvider(pid, text, currentProject ?? undefined);
+      let output: string | null = null;
+      if (pid === 'claude') {
+        const has = await hasApiKey('claude');
+        if (has) {
+          try {
+            const res = await providerChat({
+              provider_id: 'claude',
+              model: claudeModel,
+              messages: [{ role: 'user', content: text }],
+              max_tokens: 1024,
+            });
+            output = res.content;
+          } catch (e) {
+            // fallback below
+            console.warn('Claude API failed, falling back to CLI ask_provider:', e);
+          }
+        }
+      }
+
+      if (output == null) {
+        output = await askProvider(pid, text, currentProject ?? undefined);
+      }
+
       const completedAt = Date.now();
       const durationMs = completedAt - startedAt;
 
@@ -375,7 +400,28 @@ export default function Chat() {
       input: aggInput,
     });
 
-    const aggOut = await askProvider(aggregator, aggInput, currentProject ?? undefined);
+    let aggOut: string | null = null;
+    if (aggregator === 'claude') {
+      const has = await hasApiKey('claude');
+      if (has) {
+        try {
+          const res = await providerChat({
+            provider_id: 'claude',
+            model: claudeModel,
+            messages: [{ role: 'user', content: aggInput }],
+            max_tokens: 1024,
+          });
+          aggOut = res.content;
+        } catch (e) {
+          console.warn('Claude aggregator API failed, falling back to CLI:', e);
+        }
+      }
+    }
+
+    if (aggOut == null) {
+      aggOut = await askProvider(aggregator, aggInput, currentProject ?? undefined);
+    }
+
     const aggCompletedAt = Date.now();
     const aggDurationMs = aggCompletedAt - aggStartedAt;
 
@@ -535,6 +581,15 @@ export default function Chat() {
             })}
 
             <div className="ml-auto flex items-center gap-2">
+              {aggregator === 'claude' && (
+                <input
+                  value={claudeModel}
+                  onChange={(e) => setClaudeModel(e.target.value)}
+                  className="px-3 py-2 rounded-lg border border-border-subtle bg-bg-surface text-sm min-h-[40px] w-[190px]"
+                  placeholder="claude model"
+                  title="Claude model (default: claude-4-6-sonnet)"
+                />
+              )}
               <span className="text-xs text-text-tertiary">汇总器</span>
               <select
                 value={aggregator}
