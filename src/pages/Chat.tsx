@@ -16,6 +16,27 @@ type ChatMessage = {
   createdAt: Date;
 };
 
+type StepStatus = 'pending' | 'running' | 'completed' | 'failed';
+
+type RunStep = {
+  providerId: string;
+  status: StepStatus;
+  startedAt?: number;
+  completedAt?: number;
+  durationMs?: number;
+  error?: string;
+};
+
+type ChatRun = {
+  id: string;
+  createdAt: Date;
+  question: string;
+  providers: string[];
+  aggregator: string;
+  steps: RunStep[];
+  aggregatorStep: RunStep;
+};
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -50,6 +71,7 @@ export default function Chat() {
   };
   const [aggregator, setAggregator] = useState<string>('claude');
   const [input, setInput] = useState('');
+  const [activeRun, setActiveRun] = useState<ChatRun | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
       id: makeId(),
@@ -78,44 +100,79 @@ export default function Chat() {
     setMessages((m) => [...m, userMsg]);
     setInput('');
 
-    const now = new Date();
+    const runId = `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const runCreatedAt = new Date();
 
-    const providerResults = await Promise.all(
-      effectiveProviders.map(async (pid) => {
-        const startedAt = Date.now();
-        const output = await askProvider(pid, text, currentProject ?? undefined);
-        const durationMs = Date.now() - startedAt;
-
-        if (output == null) {
-          return {
-            pid,
-            content: `(${pid}) failed (no output). Duration: ${durationMs}ms`,
-          };
-        }
-
-        return {
-          pid,
-          content: output.trim() || `(${pid}) empty output. Duration: ${durationMs}ms`,
-        };
-      })
-    );
-
-    const providerReplies: ChatMessage[] = providerResults.map((r) => ({
-      id: makeId(),
-      role: 'assistant',
-      providerId: r.pid,
-      content: r.content,
-      createdAt: now,
-    }));
+    const initialRun: ChatRun = {
+      id: runId,
+      createdAt: runCreatedAt,
+      question: text,
+      providers: effectiveProviders,
+      aggregator,
+      steps: effectiveProviders.map((pid) => ({ providerId: pid, status: 'pending' })),
+      aggregatorStep: { providerId: aggregator, status: 'pending' },
+    };
+    setActiveRun(initialRun);
 
     const overrideNote: ChatMessage | null = mentioned.length > 0
       ? {
           id: makeId(),
           role: 'system',
           content: `Detected mentions: ${mentioned.map((m) => `@${m}`).join(' ')} (overriding selection)`,
-          createdAt: now,
+          createdAt: runCreatedAt,
         }
       : null;
+
+    // Execute providers in parallel, updating the run panel as results arrive.
+    const providerPromises = effectiveProviders.map(async (pid) => {
+      const startedAt = Date.now();
+      setActiveRun((r) => {
+        if (!r || r.id !== runId) return r;
+        return {
+          ...r,
+          steps: r.steps.map((s) => s.providerId === pid ? { ...s, status: 'running', startedAt } : s),
+        };
+      });
+
+      const output = await askProvider(pid, text, currentProject ?? undefined);
+      const completedAt = Date.now();
+      const durationMs = completedAt - startedAt;
+
+      if (output == null) {
+        setActiveRun((r) => {
+          if (!r || r.id !== runId) return r;
+          return {
+            ...r,
+            steps: r.steps.map((s) => s.providerId === pid
+              ? { ...s, status: 'failed', startedAt, completedAt, durationMs, error: 'no output' }
+              : s),
+          };
+        });
+        return { pid, content: `(${pid}) failed (no output). Duration: ${durationMs}ms`, durationMs };
+      }
+
+      const content = output.trim() || `(${pid}) empty output. Duration: ${durationMs}ms`;
+      setActiveRun((r) => {
+        if (!r || r.id !== runId) return r;
+        return {
+          ...r,
+          steps: r.steps.map((s) => s.providerId === pid
+            ? { ...s, status: 'completed', startedAt, completedAt, durationMs }
+            : s),
+        };
+      });
+      return { pid, content, durationMs };
+    });
+
+    const providerResults = await Promise.all(providerPromises);
+
+    const providerReplies: ChatMessage[] = providerResults.map((r) => ({
+      id: makeId(),
+      role: 'assistant',
+      providerId: r.pid,
+      content: r.content,
+      createdAt: new Date(),
+    }));
 
     const aggInput = [
       `User question:\n${text}`,
@@ -127,8 +184,35 @@ export default function Chat() {
     ].join('\n');
 
     const aggStartedAt = Date.now();
+    setActiveRun((r) => {
+      if (!r || r.id !== runId) return r;
+      return {
+        ...r,
+        aggregatorStep: { ...r.aggregatorStep, status: 'running', startedAt: aggStartedAt },
+      };
+    });
+
     const aggOut = await askProvider(aggregator, aggInput, currentProject ?? undefined);
-    const aggDurationMs = Date.now() - aggStartedAt;
+    const aggCompletedAt = Date.now();
+    const aggDurationMs = aggCompletedAt - aggStartedAt;
+
+    if (aggOut == null) {
+      setActiveRun((r) => {
+        if (!r || r.id !== runId) return r;
+        return {
+          ...r,
+          aggregatorStep: { ...r.aggregatorStep, status: 'failed', startedAt: aggStartedAt, completedAt: aggCompletedAt, durationMs: aggDurationMs, error: 'no output' },
+        };
+      });
+    } else {
+      setActiveRun((r) => {
+        if (!r || r.id !== runId) return r;
+        return {
+          ...r,
+          aggregatorStep: { ...r.aggregatorStep, status: 'completed', startedAt: aggStartedAt, completedAt: aggCompletedAt, durationMs: aggDurationMs },
+        };
+      });
+    }
 
     const aggMsg: ChatMessage = {
       id: makeId(),
@@ -138,7 +222,7 @@ export default function Chat() {
       createdAt: new Date(),
     };
 
-    setMessages((m) => [...m, ...providerReplies, ...(overrideNote ? [overrideNote] : []), aggMsg]);
+    setMessages((m) => [...m, ...(overrideNote ? [overrideNote] : []), ...providerReplies, aggMsg]);
   };
 
   return (
@@ -203,7 +287,8 @@ export default function Chat() {
           </div>
         </motion.div>
 
-        <motion.div variants={itemVariants} className="card rounded-xl overflow-hidden flex flex-col h-[calc(100vh-320px)]">
+        <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 h-[calc(100vh-320px)]">
+          <div className="card rounded-xl overflow-hidden flex flex-col">
           <div className="flex-1 overflow-auto p-4 space-y-3">
             {messages.map((msg) => {
               const isUser = msg.role === 'user';
@@ -250,6 +335,76 @@ export default function Chat() {
                 <Send className="w-4 h-4" />
               </button>
             </div>
+          </div>
+          </div>
+
+          <div className="card rounded-xl p-4 overflow-auto">
+            <div className="text-sm font-semibold text-text-primary mb-3">本次执行</div>
+            {!activeRun ? (
+              <div className="text-sm text-text-secondary">尚未发送消息</div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <div className="text-xs text-text-tertiary mb-2">Providers</div>
+                  <div className="space-y-2">
+                    {activeRun.steps.map((s) => {
+                      const cfg = AGENT_CONFIGS[s.providerId];
+                      const dot =
+                        s.status === 'running'
+                          ? 'bg-warning'
+                          : s.status === 'completed'
+                            ? 'bg-success'
+                            : s.status === 'failed'
+                              ? 'bg-error'
+                              : 'bg-text-tertiary';
+                      return (
+                        <div key={s.providerId} className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={clsx('w-2 h-2 rounded-full', dot)} />
+                            <span className="text-sm text-text-primary truncate">{cfg?.name ?? s.providerId}</span>
+                          </div>
+                          <div className="text-xs text-text-tertiary tabular-nums">
+                            {typeof s.durationMs === 'number' ? `${s.durationMs}ms` : s.status === 'running' ? '...' : ''}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs text-text-tertiary mb-2">Aggregator</div>
+                  {(() => {
+                    const s = activeRun.aggregatorStep;
+                    const cfg = AGENT_CONFIGS[s.providerId];
+                    const dot =
+                      s.status === 'running'
+                        ? 'bg-warning'
+                        : s.status === 'completed'
+                          ? 'bg-success'
+                          : s.status === 'failed'
+                            ? 'bg-error'
+                            : 'bg-text-tertiary';
+                    return (
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={clsx('w-2 h-2 rounded-full', dot)} />
+                          <span className="text-sm text-text-primary truncate">{cfg?.name ?? s.providerId}</span>
+                        </div>
+                        <div className="text-xs text-text-tertiary tabular-nums">
+                          {typeof s.durationMs === 'number' ? `${s.durationMs}ms` : s.status === 'running' ? '...' : ''}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                <div className="pt-2 border-t border-border-subtle">
+                  <div className="text-xs text-text-tertiary mb-2">Question</div>
+                  <div className="text-xs text-text-secondary whitespace-pre-wrap">{activeRun.question}</div>
+                </div>
+              </div>
+            )}
           </div>
         </motion.div>
       </div>
