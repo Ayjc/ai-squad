@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Send, Sparkles, Users } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useProjectStore } from '../stores';
 import { askProvider } from '../services/tauriService';
-import { chatAppendMessage, chatCreateConversation, chatCreateRun, chatLogStep } from '../services/chatService';
+import { chatAppendMessage, chatCreateConversation, chatCreateRun, chatListConversations, chatListMessagesPlain, chatLogStep } from '../services/chatService';
 import { AGENT_CONFIGS } from '../types/agent';
 
 type ChatRole = 'user' | 'assistant' | 'system';
@@ -58,6 +58,9 @@ const makeId = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)
 export default function Chat() {
   const { currentProjectName, currentProject } = useProjectStore();
 
+  const [conversationList, setConversationList] = useState<{ id: string; title: string; updatedAt: string }[]>([]);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+
   const providers = useMemo(() => Object.keys(AGENT_CONFIGS), []);
   const [selectedProviders, setSelectedProviders] = useState<string[]>(['codex', 'claude']);
 
@@ -80,7 +83,7 @@ export default function Chat() {
     {
       id: makeId(),
       role: 'system',
-      content: `Chat (V1) - Project: ${currentProjectName ?? 'Unknown'}. Select providers, ask, and we will add real API calls + audit next.`,
+      content: `Chat (V1) - Project: ${currentProjectName ?? 'Unknown'}.`,
       createdAt: new Date(),
     },
   ]);
@@ -94,12 +97,54 @@ export default function Chat() {
   };
 
   const ensureConversation = async (): Promise<string> => {
+    if (selectedConversationId) {
+      setConversationId(selectedConversationId);
+      return selectedConversationId;
+    }
     if (conversationId) return conversationId;
+
+    // Try to reuse the most recent conversation for this project.
+    const existing = await chatListConversations(currentProject ?? undefined);
+    if (existing.length > 0) {
+      setConversationId(existing[0].id);
+      setSelectedConversationId(existing[0].id);
+      return existing[0].id;
+    }
+
     const title = currentProjectName ? `Chat - ${currentProjectName}` : 'Chat';
     const conv = await chatCreateConversation(title, currentProject ?? undefined);
     setConversationId(conv.id);
+    setSelectedConversationId(conv.id);
     return conv.id;
   };
+
+  useEffect(() => {
+    if (!currentProject) return;
+
+    const load = async () => {
+      const convs = await chatListConversations(currentProject);
+      setConversationList(
+        convs.map((c) => ({ id: c.id, title: c.title, updatedAt: c.updated_at }))
+      );
+
+      const id = await ensureConversation();
+      setSelectedConversationId(id);
+      const plain = await chatListMessagesPlain(id);
+      setMessages(
+        plain.map((m) => ({
+          id: m.id,
+          role: (m.role as ChatRole) ?? 'system',
+          providerId: m.provider_id ?? undefined,
+          content: m.content,
+          createdAt: new Date(m.created_at),
+          kind: (m.kind as ChatMessage['kind']) ?? 'normal',
+        }))
+      );
+    };
+
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProject]);
 
   const onSend = async () => {
     const text = input.trim();
@@ -496,7 +541,60 @@ export default function Chat() {
           </div>
 
           <div className="card rounded-xl p-4 overflow-auto">
-            <div className="text-sm font-semibold text-text-primary mb-3">本次执行</div>
+            <div className="text-sm font-semibold text-text-primary mb-3">会话</div>
+          <div className="space-y-2 mb-4">
+            {conversationList.length === 0 ? (
+              <div className="text-sm text-text-secondary">暂无会话</div>
+            ) : (
+              conversationList.slice(0, 8).map((c) => (
+                <button
+                  key={c.id}
+                  onClick={async () => {
+                    setSelectedConversationId(c.id);
+                    setConversationId(c.id);
+                    const plain = await chatListMessagesPlain(c.id);
+                    setMessages(
+                      plain.map((m) => ({
+                        id: m.id,
+                        role: (m.role as ChatRole) ?? 'system',
+                        providerId: m.provider_id ?? undefined,
+                        content: m.content,
+                        createdAt: new Date(m.created_at),
+                        kind: (m.kind as ChatMessage['kind']) ?? 'normal',
+                      }))
+                    );
+                  }}
+                  className={clsx(
+                    'w-full text-left px-3 py-2 rounded-lg border transition-colors',
+                    (selectedConversationId ?? conversationId) === c.id
+                      ? 'bg-accent-muted border-accent/25 text-text-primary'
+                      : 'bg-bg-surface border-border-subtle text-text-secondary hover:text-text-primary hover:border-border-default'
+                  )}
+                  title={c.updatedAt}
+                >
+                  <div className="text-sm font-medium truncate">{c.title}</div>
+                  <div className="text-xs text-text-tertiary truncate">{c.updatedAt}</div>
+                </button>
+              ))
+            )}
+
+            <button
+              onClick={async () => {
+                const title = currentProjectName ? `Chat - ${currentProjectName}` : 'Chat';
+                const conv = await chatCreateConversation(title, currentProject ?? undefined);
+                setConversationId(conv.id);
+                setSelectedConversationId(conv.id);
+                const convs = await chatListConversations(currentProject ?? undefined);
+                setConversationList(convs.map((x) => ({ id: x.id, title: x.title, updatedAt: x.updated_at })));
+                setMessages([]);
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg border border-border-subtle text-text-secondary hover:text-text-primary hover:border-border-default transition-colors"
+            >
+              + 新建会话
+            </button>
+          </div>
+
+          <div className="text-sm font-semibold text-text-primary mb-3">本次执行</div>
             {!activeRun ? (
               <div className="text-sm text-text-secondary">尚未发送消息</div>
             ) : (

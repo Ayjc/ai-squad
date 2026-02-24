@@ -78,6 +78,20 @@ export async function chatListMessages(conversationId: string): Promise<ChatMess
   return await invoke<ChatMessageRecord[]>('chat_list_messages', { conversationId });
 }
 
+export type ChatMessagePlain = {
+  id: string;
+  conversation_id: string;
+  role: string;
+  provider_id: string | null;
+  content: string;
+  created_at: string;
+  kind: string | null;
+};
+
+export async function chatListMessagesPlain(conversationId: string): Promise<ChatMessagePlain[]> {
+  return await invoke<ChatMessagePlain[]>('chat_list_messages_plain', { conversationId });
+}
+
 export async function chatCreateRun(args: {
   conversationId: string;
   question: string;

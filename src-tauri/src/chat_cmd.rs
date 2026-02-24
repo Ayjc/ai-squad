@@ -28,6 +28,13 @@ pub fn chat_list_messages(db: State<'_, DbState>, conversation_id: String) -> Re
 }
 
 #[tauri::command]
+pub fn chat_list_messages_plain(db: State<'_, DbState>, conversation_id: String) -> Result<Vec<crate::chat_plain::ChatMessagePlain>, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    let enc = crate::chat_db::list_messages(&conn, conversation_id)?;
+    enc.into_iter().map(crate::chat_plain::decrypt_message).collect()
+}
+
+#[tauri::command]
 pub fn chat_create_run(db: State<'_, DbState>, input: NewRunInput) -> Result<ChatRunRecord, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
     crate::chat_db::create_run(&conn, input)
