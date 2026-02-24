@@ -4,6 +4,7 @@ import { Send, Sparkles, Users } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useProjectStore } from '../stores';
 import { askProvider } from '../services/tauriService';
+import { chatAppendMessage, chatCreateConversation, chatCreateRun, chatLogStep } from '../services/chatService';
 import { AGENT_CONFIGS } from '../types/agent';
 
 type ChatRole = 'user' | 'assistant' | 'system';
@@ -72,6 +73,7 @@ export default function Chat() {
   };
   const [aggregator, setAggregator] = useState<string>('claude');
   const [input, setInput] = useState('');
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [activeRun, setActiveRun] = useState<ChatRun | null>(null);
   const [showProviderReplies, setShowProviderReplies] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
@@ -91,9 +93,19 @@ export default function Chat() {
     });
   };
 
+  const ensureConversation = async (): Promise<string> => {
+    if (conversationId) return conversationId;
+    const title = currentProjectName ? `Chat - ${currentProjectName}` : 'Chat';
+    const conv = await chatCreateConversation(title, currentProject ?? undefined);
+    setConversationId(conv.id);
+    return conv.id;
+  };
+
   const onSend = async () => {
     const text = input.trim();
     if (!text) return;
+
+    const convId = await ensureConversation();
 
     const mentioned = parseMentions(text);
     const effectiveProviders = mentioned.length > 0 ? mentioned : selectedProviders;
@@ -102,8 +114,18 @@ export default function Chat() {
     setMessages((m) => [...m, userMsg]);
     setInput('');
 
-    const runId = `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    // Persist user message (encrypted at rest).
+    await chatAppendMessage({ conversationId: convId, role: 'user', content: text });
+
     const runCreatedAt = new Date();
+
+    const run = await chatCreateRun({
+      conversationId: convId,
+      question: text,
+      providers: effectiveProviders,
+      aggregatorProviderId: aggregator,
+    });
+    const runId = run.id;
 
     const initialRun: ChatRun = {
       id: runId,
@@ -115,6 +137,18 @@ export default function Chat() {
       aggregatorStep: { providerId: aggregator, status: 'pending' },
     };
     setActiveRun(initialRun);
+
+    // Initial audit breadcrumbs.
+    await Promise.allSettled(
+      effectiveProviders.map((pid) =>
+        chatLogStep({
+          runId,
+          providerId: pid,
+          status: 'pending',
+        })
+      )
+    );
+    await chatLogStep({ runId, providerId: aggregator, status: 'pending' });
 
     const overrideNote: ChatMessage | null = mentioned.length > 0
       ? {
@@ -135,6 +169,13 @@ export default function Chat() {
           steps: r.steps.map((s) => s.providerId === pid ? { ...s, status: 'running', startedAt } : s),
         };
       });
+      void chatLogStep({
+        runId,
+        providerId: pid,
+        status: 'running',
+        startedAt: new Date(startedAt).toISOString(),
+        input: text,
+      });
 
       const output = await askProvider(pid, text, currentProject ?? undefined);
       const completedAt = Date.now();
@@ -150,6 +191,19 @@ export default function Chat() {
               : s),
           };
         });
+
+        void chatLogStep({
+          runId,
+          providerId: pid,
+          status: 'failed',
+          durationMs,
+          errorCategory: 'no_output',
+          errorRaw: 'ask_provider returned null',
+          startedAt: new Date(startedAt).toISOString(),
+          completedAt: new Date(completedAt).toISOString(),
+          input: text,
+        });
+
         return { pid, content: `(${pid}) failed (no output). Duration: ${durationMs}ms`, durationMs };
       }
 
@@ -163,6 +217,18 @@ export default function Chat() {
             : s),
         };
       });
+
+      void chatLogStep({
+        runId,
+        providerId: pid,
+        status: 'completed',
+        durationMs,
+        startedAt: new Date(startedAt).toISOString(),
+        completedAt: new Date(completedAt).toISOString(),
+        input: text,
+        output: content,
+      });
+
       return { pid, content, durationMs };
     });
 
@@ -195,6 +261,14 @@ export default function Chat() {
       };
     });
 
+    void chatLogStep({
+      runId,
+      providerId: aggregator,
+      status: 'running',
+      startedAt: new Date(aggStartedAt).toISOString(),
+      input: aggInput,
+    });
+
     const aggOut = await askProvider(aggregator, aggInput, currentProject ?? undefined);
     const aggCompletedAt = Date.now();
     const aggDurationMs = aggCompletedAt - aggStartedAt;
@@ -207,6 +281,18 @@ export default function Chat() {
           aggregatorStep: { ...r.aggregatorStep, status: 'failed', startedAt: aggStartedAt, completedAt: aggCompletedAt, durationMs: aggDurationMs, error: 'no output' },
         };
       });
+
+      void chatLogStep({
+        runId,
+        providerId: aggregator,
+        status: 'failed',
+        durationMs: aggDurationMs,
+        errorCategory: 'no_output',
+        errorRaw: 'ask_provider returned null',
+        startedAt: new Date(aggStartedAt).toISOString(),
+        completedAt: new Date(aggCompletedAt).toISOString(),
+        input: aggInput,
+      });
     } else {
       setActiveRun((r) => {
         if (!r || r.id !== runId) return r;
@@ -214,6 +300,17 @@ export default function Chat() {
           ...r,
           aggregatorStep: { ...r.aggregatorStep, status: 'completed', startedAt: aggStartedAt, completedAt: aggCompletedAt, durationMs: aggDurationMs },
         };
+      });
+
+      void chatLogStep({
+        runId,
+        providerId: aggregator,
+        status: 'completed',
+        durationMs: aggDurationMs,
+        startedAt: new Date(aggStartedAt).toISOString(),
+        completedAt: new Date(aggCompletedAt).toISOString(),
+        input: aggInput,
+        output: aggOut,
       });
     }
 
@@ -225,6 +322,36 @@ export default function Chat() {
       content: (aggOut?.trim() || '(aggregator) failed / empty output.') + `\n\n(duration: ${aggDurationMs}ms)`,
       createdAt: new Date(),
     };
+
+    // Persist assistant messages (encrypted at rest).
+    await Promise.allSettled([
+      ...providerReplies.map((m) =>
+        chatAppendMessage({
+          conversationId: convId,
+          role: 'assistant',
+          providerId: m.providerId,
+          content: m.content,
+          kind: m.kind,
+        })
+      ),
+      chatAppendMessage({
+        conversationId: convId,
+        role: 'assistant',
+        providerId: aggMsg.providerId,
+        content: aggMsg.content,
+        kind: aggMsg.kind,
+      }),
+      ...(overrideNote
+        ? [
+            chatAppendMessage({
+              conversationId: convId,
+              role: 'system',
+              content: overrideNote.content,
+              kind: undefined,
+            }),
+          ]
+        : []),
+    ]);
 
     setMessages((m) => [...m, ...(overrideNote ? [overrideNote] : []), ...providerReplies, aggMsg]);
   };
