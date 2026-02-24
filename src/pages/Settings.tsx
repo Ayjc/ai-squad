@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Trash2 } from 'lucide-react';
 import { useAgentStore } from '../stores';
 import { getCollaborationStats } from '../services/tauriService';
+import { retentionRun } from '../services/retentionService';
 import type { CollaborationStat } from '../types/common';
 import { clsx } from 'clsx';
 
@@ -49,6 +50,14 @@ export default function Settings() {
   const { agents } = useAgentStore();
   const [collabStats, setCollabStats] = useState<CollaborationStat[]>([]);
   const [loading, setLoading] = useState(false);
+  const [retentionLoading, setRetentionLoading] = useState(false);
+  const [retentionReport, setRetentionReport] = useState<null | {
+    dbPath: string;
+    dbSizeBytes: number;
+    maxBytes: number;
+    maxDays: number;
+    deletedRows: number;
+  }>(null);
 
   const fetchStats = async () => {
     setLoading(true);
@@ -67,6 +76,37 @@ export default function Settings() {
   useEffect(() => {
     fetchStats();
   }, []);
+
+  const formatBytes = (bytes: number) => {
+    if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let value = bytes;
+    let i = 0;
+    while (value >= 1024 && i < units.length - 1) {
+      value /= 1024;
+      i += 1;
+    }
+    return `${value.toFixed(i === 0 ? 0 : 2)} ${units[i]}`;
+  };
+
+  const runRetention = async () => {
+    setRetentionLoading(true);
+    try {
+      const report = await retentionRun(false);
+      setRetentionReport({
+        dbPath: report.db_path,
+        dbSizeBytes: report.db_size_bytes,
+        maxBytes: report.max_bytes,
+        maxDays: report.max_days,
+        deletedRows: report.deleted_rows,
+      });
+    } catch (error) {
+      console.warn('Retention run failed:', error);
+      setRetentionReport(null);
+    } finally {
+      setRetentionLoading(false);
+    }
+  };
 
   return (
     <motion.div
@@ -120,6 +160,34 @@ export default function Settings() {
               </motion.div>
             ))}
           </div>
+        </motion.div>
+
+        {/* 数据清理 */}
+        <motion.div variants={itemVariants} className="card mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-medium text-text-primary">本地数据清理</h3>
+            <button
+              type="button"
+              onClick={runRetention}
+              disabled={retentionLoading}
+              className="btn-ghost flex items-center gap-1 text-sm"
+              title="Run retention cleanup (90 days + 1GB)"
+            >
+              <Trash2 className={clsx('w-4 h-4', retentionLoading && 'animate-pulse')} />
+              清理
+            </button>
+          </div>
+          <p className="text-text-secondary text-sm">
+            默认保留策略：90 天 + 1GB（超出会删除最旧记录）。
+          </p>
+          {retentionReport && (
+            <div className="mt-3 text-sm text-text-secondary space-y-1">
+              <div>DB: <span className="text-text-primary">{retentionReport.dbPath}</span></div>
+              <div>当前大小: <span className="text-text-primary">{formatBytes(retentionReport.dbSizeBytes)}</span></div>
+              <div>阈值: <span className="text-text-primary">{formatBytes(retentionReport.maxBytes)} / {retentionReport.maxDays} days</span></div>
+              <div>删除行数: <span className="text-text-primary">{retentionReport.deletedRows}</span></div>
+            </div>
+          )}
         </motion.div>
 
         {/* 协作统计 */}

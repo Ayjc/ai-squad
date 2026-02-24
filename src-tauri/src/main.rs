@@ -13,6 +13,8 @@ mod keys;
 mod keys_cmd;
 mod paths;
 mod project;
+mod retention;
+mod retention_cmd;
 mod secure;
 
 fn main() {
@@ -43,6 +45,9 @@ fn main() {
             chat_cmd::chat_create_run,
             chat_cmd::chat_log_step,
             chat_cmd::chat_list_run_steps_plain,
+
+            // retention
+            retention_cmd::retention_run,
 
             // project commands
             project::get_project_info,
