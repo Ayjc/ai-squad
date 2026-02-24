@@ -5,10 +5,15 @@ export interface RetentionConfig {
   max_days: number;
 }
 
+export interface ProviderModelsConfig {
+  claude_default_model: string;
+}
+
 export interface AppConfig {
   concurrency_limit: number;
   context_max_chars: number;
   retention: RetentionConfig;
+  models: ProviderModelsConfig;
 }
 
 export async function getConfig(): Promise<AppConfig> {

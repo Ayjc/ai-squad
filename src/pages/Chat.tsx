@@ -6,6 +6,7 @@ import { useProjectStore } from '../stores';
 import { askProvider } from '../services/tauriService';
 import { providerChat } from '../services/providerApiService';
 import { hasApiKey } from '../services/keyService';
+import { getConfig, saveConfig } from '../services/appConfigService';
 import { chatAppendMessage, chatCreateConversation, chatCreateRun, chatListConversations, chatListMessagesPlain, chatListRunStepsPlain, chatLogStep } from '../services/chatService';
 import { AGENT_CONFIGS } from '../types/agent';
 
@@ -90,6 +91,7 @@ export default function Chat() {
   };
   const [aggregator, setAggregator] = useState<string>('claude');
   const [claudeModel, setClaudeModel] = useState<string>('claude-4-6-sonnet');
+  const [claudeModelDirty, setClaudeModelDirty] = useState(false);
   const [input, setInput] = useState('');
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [activeRun, setActiveRun] = useState<ChatRun | null>(null);
@@ -139,10 +141,16 @@ export default function Chat() {
     if (!currentProject) return;
 
     const load = async () => {
-      const convs = await chatListConversations(currentProject);
-      setConversationList(
-        convs.map((c) => ({ id: c.id, title: c.title, updatedAt: c.updated_at }))
-      );
+      const [convs, cfg] = await Promise.all([
+        chatListConversations(currentProject),
+        getConfig(),
+      ]);
+
+      setConversationList(convs.map((c) => ({ id: c.id, title: c.title, updatedAt: c.updated_at })));
+
+      if (!claudeModelDirty && cfg?.models?.claude_default_model) {
+        setClaudeModel(cfg.models.claude_default_model);
+      }
 
       const id = await ensureConversation();
       setSelectedConversationId(id);
@@ -584,10 +592,27 @@ export default function Chat() {
               {aggregator === 'claude' && (
                 <input
                   value={claudeModel}
-                  onChange={(e) => setClaudeModel(e.target.value)}
+                  onChange={(e) => {
+                    setClaudeModelDirty(true);
+                    setClaudeModel(e.target.value);
+                  }}
+                  onBlur={async () => {
+                    try {
+                      const cfg = await getConfig();
+                      await saveConfig({
+                        ...cfg,
+                        models: {
+                          ...(cfg.models ?? { claude_default_model: 'claude-4-6-sonnet' }),
+                          claude_default_model: claudeModel,
+                        },
+                      });
+                    } catch (e) {
+                      console.warn('Failed to save config:', e);
+                    }
+                  }}
                   className="px-3 py-2 rounded-lg border border-border-subtle bg-bg-surface text-sm min-h-[40px] w-[190px]"
                   placeholder="claude model"
-                  title="Claude model (default: claude-4-6-sonnet)"
+                  title="Claude model (saved to ~/.ai-squad/config.json)"
                 />
               )}
               <span className="text-xs text-text-tertiary">汇总器</span>

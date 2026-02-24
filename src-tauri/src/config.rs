@@ -9,10 +9,16 @@ pub struct RetentionConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProviderModelsConfig {
+    pub claude_default_model: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     pub concurrency_limit: u32,
     pub context_max_chars: u32,
     pub retention: RetentionConfig,
+    pub models: ProviderModelsConfig,
 }
 
 impl Default for AppConfig {
@@ -23,6 +29,9 @@ impl Default for AppConfig {
             retention: RetentionConfig {
                 max_bytes: 1_000_000_000,
                 max_days: 90,
+            },
+            models: ProviderModelsConfig {
+                claude_default_model: "claude-4-6-sonnet".to_string(),
             },
         }
     }
