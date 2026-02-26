@@ -2,8 +2,22 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod ccb;
+mod chat;
+mod chat_cmd;
+mod chat_db;
+mod chat_plain;
+mod chat_runs;
+mod config;
 mod db;
+mod keys;
+mod keys_cmd;
+mod paths;
 mod project;
+mod retention;
+mod provider_api;
+mod providers;
+mod retention_cmd;
+mod secure;
 
 fn main() {
     tauri::Builder::default()
@@ -17,6 +31,29 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            // config + keys
+            config::get_config,
+            config::save_config_cmd,
+            keys_cmd::set_api_key,
+            keys_cmd::has_api_key,
+            keys_cmd::reveal_api_key,
+
+            // chat commands
+            chat_cmd::chat_create_conversation,
+            chat_cmd::chat_list_conversations,
+            chat_cmd::chat_append_message,
+            chat_cmd::chat_list_messages,
+            chat_cmd::chat_list_messages_plain,
+            chat_cmd::chat_create_run,
+            chat_cmd::chat_log_step,
+            chat_cmd::chat_list_run_steps_plain,
+
+            // retention
+            retention_cmd::retention_run,
+
+            // provider API
+            provider_api::provider_chat,
+
             // project commands
             project::get_project_info,
             project::start_ccb,

@@ -18,6 +18,16 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 tauri-plugin-dialog = "2.0"
 dirs = "5.0"
 
+# local encryption + secure key storage
+base64 = "0.22"
+rand = "0.8"
+chacha20poly1305 = { version = "0.10", features = ["std"] }
+keyring = { version = "2.3", default-features = true }
+uuid = { version = "1.8", features = ["v4"] }
+
+# HTTP providers (Anthropic, etc.)
+reqwest = { version = "0.12", features = ["json", "gzip", "rustls-tls"] }
+
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]

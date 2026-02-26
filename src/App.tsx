@@ -7,6 +7,7 @@ import Squad from './pages/Squad';
 import Tasks from './pages/Tasks';
 import History from './pages/History';
 import Settings from './pages/Settings';
+import Chat from './pages/Chat';
 import ProjectSelector from './pages/ProjectSelector';
 import { useAgentStore, useTaskStore, useProjectStore } from './stores';
 import { getProviders, getTasks } from './services/tauriService';
@@ -57,6 +58,7 @@ function App() {
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={<Overview />} />
+          <Route path="/chat" element={<Chat />} />
           <Route path="/squad" element={<Squad />} />
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/history" element={<History />} />

@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
+  MessageSquare,
   Users,
   ClipboardList,
   History,
@@ -17,6 +18,7 @@ interface LayoutProps {
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: '概览' },
+  { to: '/chat', icon: MessageSquare, label: '对话' },
   { to: '/squad', icon: Users, label: '团队' },
   { to: '/tasks', icon: ClipboardList, label: '任务' },
   { to: '/history', icon: History, label: '历史' },
